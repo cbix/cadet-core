@@ -28,45 +28,20 @@
 
 namespace cadet {
 
-namespace model {
+bool Field::configure(IParameterProvider *paramProvider) {
+  if (!paramProvider)
+    return false;
 
-class Field : public IField {
-public:
-  Field() {}
-  virtual ~Field() {}
-
-  static const char *identifier() { return "LINEAR_INTERP_FIELD"; }
-  virtual const char *name() const CADET_NOEXCEPT {
-    return Field::identifier();
+  std::vector<std::string> dimNames =
+      paramProvider->getStringArray("DIMENSIONS");
+  std::vector<size_t> shape;
+  for (std::string dim : dimNames) {
+    std::vector dimCoords = paramProvider->getDoubleArray("COORD_" + dim);
+    shape.push_back(dimCoords.size());
   }
+  std::vector<double> _data = paramProvider->getDoubleArray("DATA");
 
-  virtual bool configure(IParameterProvider *paramProvider) {
-    if (!paramProvider)
-      return false;
-
-    std::vector<std::string> dimNames =
-        paramProvider->getStringArray("DIMENSIONS");
-    std::vector<size_t> shape;
-    for (std::string dim : dimNames) {
-      std::vector dimCoords = paramProvider->getDoubleArray("COORD_" + dim);
-      shape.push_back(dimCoords.size());
-    }
-    std::vector<double> _data = paramProvider->getDoubleArray("DATA");
-
-    return true;
-  }
-
-private:
-  std::vector<double> _time; //!< Time point of each measurement in [s]
-  std::vector<std::pair<std::string, std::vector<double>>> _dimensions;
-};
-
-namespace extfun {
-void registerField(
-    std::unordered_map<std::string, std::function<IField *()>> &extFuns) {
-  extFuns[Field::identifier()] = []() { return new Field(); };
+  return true;
 }
-} // namespace extfun
 
-} // namespace model
 } // namespace cadet
