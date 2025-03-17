@@ -103,6 +103,9 @@ ModelSystem::~ModelSystem() CADET_NOEXCEPT {
   for (IUnitOperation *model : _models)
     delete model;
 
+  for (Field *field : _fields)
+    delete field;
+
   for (IExternalFunction *extFun : _extFunctions)
     delete extFun;
 
@@ -124,6 +127,9 @@ void ModelSystem::addModel(IModel *unitOp) {
 
   if (uo->hasInlet() && uo->hasOutlet())
     _inOutModels.push_back(_models.size() - 1);
+
+  // Propagate fields to submodel
+  uo->setFields(_fields.data(), _fields.size());
 
   // Propagate external functions to submodel
   uo->setExternalFunctions(_extFunctions.data(), _extFunctions.size());
