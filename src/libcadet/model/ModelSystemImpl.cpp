@@ -479,32 +479,30 @@ bool ModelSystem::configureModelDiscretization(
           LOG(Error) << "Failed to configure field" << i << " (" << extType
                      << "), field is ignored";
         }
+      } else {
+        IExternalFunction *const func = helper.createExternalFunction(extType);
+        if (func) {
+          const bool confSuccess = func->configure(&paramProvider);
 
-        continue;
-      }
+          if (confSuccess)
+            _extFunctions.push_back(func);
+          else {
+            // Ignore the external function and delete this instance
+            _extFunctions.push_back(nullptr);
+            delete func;
+            success = false;
 
-      IExternalFunction *const func = helper.createExternalFunction(extType);
-      if (func) {
-        const bool confSuccess = func->configure(&paramProvider);
-
-        if (confSuccess)
-          _extFunctions.push_back(func);
-        else {
-          // Ignore the external function and delete this instance
+            LOG(Error) << "Failed to configure external source " << i << " ("
+                       << extType << "), source is ignored";
+          }
+        } else {
+          // Unknown type of external function
           _extFunctions.push_back(nullptr);
-          delete func;
           success = false;
 
-          LOG(Error) << "Failed to configure external source " << i << " ("
-                     << extType << "), source is ignored";
+          LOG(Error) << "Failed to create external source " << i << " as type "
+                     << extType << " is unknown, source is ignored";
         }
-      } else {
-        // Unknown type of external function
-        _extFunctions.push_back(nullptr);
-        success = false;
-
-        LOG(Error) << "Failed to create external source " << i << " as type "
-                   << extType << " is unknown, source is ignored";
       }
 
       paramProvider.popScope();
