@@ -39,6 +39,7 @@
 #include "linalg/Gmres.hpp"
 
 #include "Benchmark.hpp"
+#include "cadet/Field.hpp"
 
 namespace cadet
 {
@@ -258,6 +259,7 @@ protected:
 	inline unsigned int numCouplingDOF() const CADET_NOEXCEPT { return _couplingIdxMap.size(); }
 
 	std::vector<IUnitOperation*> _models; //!< Unit operation models
+	std::vector<Field*> _fields; //!< Fields
 	std::vector<IExternalFunction*> _extFunctions; //!< External functions
 	linalg::SparseMatrix<double>* _jacNF; //!< Jacobian block connecting coupling DOF to inlets
 	linalg::SparseMatrix<double>* _jacFN; //!< Jacobian block connecting outlets to coupling DOF

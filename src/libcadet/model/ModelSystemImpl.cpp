@@ -467,6 +467,19 @@ bool ModelSystem::configureModelDiscretization(
 
       if (extType == std::string("LINEAR_INTERP_FIELD")) {
         Field *const field = new Field();
+        const bool confSuccess = field->configure(&paramProvider);
+
+        if (confSuccess)
+          _fields.push_back(field);
+        else {
+          _fields.push_back(nullptr);
+          delete field;
+          success = false;
+
+          LOG(Error) << "Failed to configure field" << i << " (" << extType
+                     << "), field is ignored";
+        }
+
         continue;
       }
 
