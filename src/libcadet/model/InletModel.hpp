@@ -121,6 +121,7 @@ public:
 	virtual void leanConsistentInitialSensitivity(const SimulationTime& simTime, const ConstSimulationState& simState,
 		std::vector<double*>& vecSensY, std::vector<double*>& vecSensYdot, active const* const adRes, util::ThreadLocalStorage& threadLocalMem);
 
+	virtual void setFields(Field **fields, unsigned int size) { }
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { }
 
 	virtual void multiplyWithJacobian(const SimulationTime& simTime, const ConstSimulationState& simState, double const* yS, double alpha, double beta, double* ret);
