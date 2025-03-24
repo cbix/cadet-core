@@ -170,6 +170,7 @@ public:
 	ParamHandlerBindingModelBase() { }
 
 	virtual const char* name() const CADET_NOEXCEPT { return handler_t::identifier(); }
+	virtual void setFields(Field** fields, unsigned int size) { _paramHandler.setFields(fields, size); }
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { _paramHandler.setExternalFunctions(extFuns, size); }
 	virtual bool dependsOnTime() const CADET_NOEXCEPT { return handler_t::dependsOnTime(); }
 	virtual bool requiresWorkspace() const CADET_NOEXCEPT { return handler_t::requiresWorkspace() || BindingModelBase::requiresWorkspace(); }
