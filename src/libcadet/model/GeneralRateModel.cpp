@@ -2555,6 +2555,16 @@ void GeneralRateModel<ConvDispOperator>::multiplyWithDerivativeJacobian(const Si
 }
 
 template <typename ConvDispOperator>
+void GeneralRateModel<ConvDispOperator>::setFields(Field** fields, unsigned int size)
+{
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setFields(fields, size);
+	}
+}
+
+template <typename ConvDispOperator>
 void GeneralRateModel<ConvDispOperator>::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)
 {
 	for (IBindingModel* bm : _binding)

@@ -20,6 +20,7 @@
 
 #include "cadet/ExternalFunction.hpp"
 #include "cadet/Exceptions.hpp"
+#include "cadet/Field.hpp"
  
 #include "LoggingUtils.hpp"
 #include "Logging.hpp"
@@ -93,6 +94,11 @@ namespace model
 	struct ExternalParamHandlerBase
 	{	
 	public:
+
+		inline void setFields(Field** field, int size)
+		{
+			// TODO implementation
+		}
 
 		/**
 		 * @brief Sets external functions for this model

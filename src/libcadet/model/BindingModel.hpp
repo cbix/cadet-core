@@ -33,6 +33,7 @@
 #include "AutoDiff.hpp"
 #include "SimulationTypes.hpp"
 #include "Memory.hpp"
+#include "cadet/Field.hpp"
 
 namespace cadet
 {
@@ -152,6 +153,8 @@ public:
 	 * @param [in] parTypeIdx Index of the particle type this binding model belongs to
 	 */
 	virtual void fillBoundPhaseInitialParameters(ParameterId* params, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx) const CADET_NOEXCEPT = 0;
+
+	virtual void setFields(Field** fields, unsigned int size) = 0;
 
 	/**
 	 * @brief Sets external functions for this binding model

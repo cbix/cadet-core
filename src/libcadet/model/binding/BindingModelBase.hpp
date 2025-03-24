@@ -81,6 +81,8 @@ public:
 		return requiredAdVars * sizeof(active) + alignof(active);
 	}
 
+	virtual void setFields(Field** fields, unsigned int size) { }
+
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { }
 
 	virtual void timeDerivativeQuasiStationaryFluxes(double t, unsigned int secIdx, const ColumnPosition& colPos, double const* yCp, double const* y, double* dResDt, LinearBufferAllocator workSpace) const { }

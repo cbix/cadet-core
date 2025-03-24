@@ -514,6 +514,8 @@ public:
 		return _paramHandler.cacheSize(nComp, totalNumBoundStates, nBoundStates);
 	}
 
+	virtual void setFields(Field** fields, unsigned int size) { _paramHandler.setFields(fields, size); }
+
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { _paramHandler.setExternalFunctions(extFuns, size); }
 
 	// The next three flux() function implementations and two analyticJacobian() function
