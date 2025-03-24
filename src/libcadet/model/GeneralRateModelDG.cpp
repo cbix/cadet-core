@@ -17,6 +17,7 @@
 #include "ParamReaderScopes.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/ExternalFunction.hpp"
+#include "cadet/Field.hpp"
 #include "cadet/SolutionRecorder.hpp"
 #include "ConfigurationHelper.hpp"
 #include "model/BindingModel.hpp"
@@ -1855,6 +1856,15 @@ void GeneralRateModelDG::multiplyWithDerivativeJacobian(const SimulationTime& si
 
 	// Handle inlet DOFs (all algebraic)
 	std::fill_n(ret, _disc.nComp, 0.0);
+}
+
+void GeneralRateModelDG::setFields(Field** fields, unsigned int size)
+{
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setFields(fields, size);
+	}
 }
 
 void GeneralRateModelDG::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)

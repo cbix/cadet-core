@@ -15,6 +15,7 @@
 #include "ParamReaderHelper.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/ExternalFunction.hpp"
+#include "cadet/Field.hpp"
 #include "cadet/SolutionRecorder.hpp"
 #include "ConfigurationHelper.hpp"
 #include "model/BindingModel.hpp"
@@ -797,6 +798,12 @@ namespace cadet
 
 			// Handle inlet DOFs (all algebraic)
 			std::fill_n(ret, _disc.nComp, 0.0);
+		}
+
+		void LumpedRateModelWithoutPoresDG::setFields(Field** fields, unsigned int size)
+		{
+			if (_binding[0])
+				_binding[0]->setFields(fields, size);
 		}
 
 		void LumpedRateModelWithoutPoresDG::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)
