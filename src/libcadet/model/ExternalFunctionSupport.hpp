@@ -45,6 +45,8 @@ namespace model
 	 */
 	struct ConstParamHandlerBase
 	{
+		inline void setFields(Field** fields, unsigned int size) { }
+
 		/**
 		 * @brief Sets external functions for this model
 		 * @param [in] extFuns Pointer to array of IExternalFunction objects of size @p size
