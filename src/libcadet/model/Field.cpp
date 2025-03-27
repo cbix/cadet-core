@@ -46,6 +46,25 @@ bool Field::configure(IParameterProvider *paramProvider) {
   return true;
 }
 
+double Field::valueAtIndex(std::vector<size_t> idx) {
+  size_t n = _dimensions.size();
+  if (idx.size() != n || n == 0) {
+    throw std::domain_error("Number of dimensions doesn't match or is zero");
+  }
+  size_t index = 0;
+  size_t size = 1;
+  for (size_t i = 0; i < n; i++) {
+    size_t currentIndex = idx[n - i - 1];
+    size_t currentDimSize = _dimensions[n - i - 1].size();
+    if (currentIndex >= currentDimSize) {
+      throw std::out_of_range("Index out of bounds");
+    }
+    index += currentIndex * size;
+    size *= currentDimSize;
+  }
+  return _data[index];
+}
+
 double Field::interpolateValue(std::vector<double> coords) {
   size_t n = _shape.size();
   if (coords.size() != n) {
@@ -81,12 +100,32 @@ double Field::interpolateValue(std::vector<double> coords) {
     bounds.push_back({l, r, weight});
   }
 
-  // TODO sample bounds
+  typedef struct {
+    std::vector<size_t> idx;
+    double weight;
+  } field_bound_sample_t;
+  std::vector<field_bound_sample_t> boundSamples;
+  for (const field_interp_bounds_t &bound : bounds) {
+    if (boundSamples.size() == 0) {
+      boundSamples.push_back({{bound.lower}, bound.weight});
+      boundSamples.push_back({{bound.upper}, 1 - bound.weight});
+      continue;
+    }
+    size_t n = boundSamples.size();
+    for (size_t i = 0; i < n; i++) {
+      field_bound_sample_t sampleUpper = boundSamples[i];
+      boundSamples[i].idx.push_back(bound.lower);
+      boundSamples[i].weight *= bound.weight;
+      sampleUpper.idx.push_back(bound.upper);
+      sampleUpper.weight *= 1 - bound.weight;
+      boundSamples.push_back(sampleUpper);
+    }
+  }
 
   double result = 0.0;
-
-  // TODO interpolate
-
+  for (field_bound_sample_t s : boundSamples) {
+    result += valueAtIndex(s.idx) * s.weight;
+  }
   return result;
 }
 

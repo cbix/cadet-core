@@ -50,6 +50,8 @@ public:
    */
   bool configure(IParameterProvider *paramProvider);
 
+  double valueAtIndex(std::vector<size_t> idx);
+
   double interpolateValue(std::vector<double> coords);
 
   static const char *identifier() { return "LINEAR_INTERP_FIELD"; }
@@ -59,6 +61,7 @@ private:
   std::vector<size_t> _shape;
   //std::vector<std::pair<std::string, std::vector<double>>> _dimensions;
   std::vector<std::vector<double>> _dimensions;
+  std::vector<double> _data;
 };
 
 } // namespace cadet
