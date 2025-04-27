@@ -19,6 +19,8 @@
 #include "cadet/Field.hpp"
 #include "cadet/ParameterProvider.hpp"
 #include "common/CompilerSpecific.hpp"
+#include "LoggingUtils.hpp"
+#include "Logging.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -35,18 +37,27 @@ bool Field::configure(IParameterProvider *paramProvider) {
 
   std::vector<std::string> dimNames =
       paramProvider->getStringArray("DIMENSIONS");
+  LOG(Debug) << "Field::configure";
+  LOG(Debug) << "field dims: " << dimNames;
+  size_t size = 1;
   for (std::string dim : dimNames) {
     std::vector dimCoords = paramProvider->getDoubleArray("COORD_" + dim);
+    size *= dimCoords.size();
     _shape.push_back(dimCoords.size());
     _dimensions.push_back(dimCoords);
+    LOG(Debug) << dim << " size=" << dimCoords.size() << ", coords=" << dimCoords;
   }
-  std::vector<double> _data = paramProvider->getDoubleArray("DATA");
+  _data = paramProvider->getDoubleArray("DATA");
+  if (_data.size() != size) {
+    throw std::domain_error("DATA is " + std::to_string(_data.size()) + ", expected " + std::to_string(size));
+  }
   // TODO get other parameters
 
   return true;
 }
 
 double Field::valueAtIndex(std::vector<size_t> idx) {
+  LOG(Debug) << "valueAtIndex" << idx;
   size_t n = _dimensions.size();
   if (idx.size() != n || n == 0) {
     throw std::domain_error("Number of dimensions doesn't match or is zero");
@@ -66,6 +77,7 @@ double Field::valueAtIndex(std::vector<size_t> idx) {
 }
 
 double Field::interpolateValue(std::vector<double> coords) {
+  LOG(Debug) << "Field::interpolateValue " << coords;
   size_t n = _shape.size();
   if (coords.size() != n) {
     throw std::domain_error("Number of dimensions doesn't match");
@@ -126,6 +138,7 @@ double Field::interpolateValue(std::vector<double> coords) {
   for (field_bound_sample_t s : boundSamples) {
     result += valueAtIndex(s.idx) * s.weight;
   }
+  LOG(Debug) << "interpolation result = " << result;
   return result;
 }
 
