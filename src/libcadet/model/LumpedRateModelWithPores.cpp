@@ -1547,6 +1547,33 @@ bool LumpedRateModelWithPores<ConvDispOperator>::setParameter(const ParameterId&
 				return true;
 			}
 		}
+
+		if (model::setParameter(pId, value, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return true;
+	}
+
+	return UnitOperationBase::setParameter(pId, value);
+}
+
+template <typename ConvDispOperator>
+bool LumpedRateModelWithPores<ConvDispOperator>::setParameter(const ParameterId& pId, int value)
+{
+	if (pId.unitOperation == _unitOpIdx)
+	{
+		if (model::setParameter(pId, value, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return true;
+	}
+
+	return UnitOperationBase::setParameter(pId, value);
+}
+
+template <typename ConvDispOperator>
+bool LumpedRateModelWithPores<ConvDispOperator>::setParameter(const ParameterId& pId, bool value)
+{
+	if (pId.unitOperation == _unitOpIdx)
+	{
+		if (model::setParameter(pId, value, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return true;
 	}
 
 	return UnitOperationBase::setParameter(pId, value);
@@ -1598,6 +1625,9 @@ void LumpedRateModelWithPores<ConvDispOperator>::setSensitiveParameterValue(cons
 				return;
 			}
 		}
+
+		if (model::setSensitiveParameterValue(pId, value, _sensParams, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return;
 	}
 
 	UnitOperationBase::setSensitiveParameterValue(pId, value);
@@ -1674,6 +1704,12 @@ bool LumpedRateModelWithPores<ConvDispOperator>::setSensitiveParameter(const Par
 				param->setADValue(adDirection, adValue);
 				return true;
 			}
+		}
+
+		if (model::setSensitiveParameter(pId, adDirection, adValue, _sensParams, std::vector<IDynamicReactionModel*> { _dynReactionBulk }, true))
+		{
+			LOG(Debug) << "Found parameter " << pId << " in DynamicBulkReactionModel: Dir " << adDirection << " is set to " << adValue;
+			return true;
 		}
 	}
 

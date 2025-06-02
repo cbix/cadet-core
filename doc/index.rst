@@ -18,6 +18,7 @@
 
 .. image:: https://img.shields.io/badge/JuRSE_Code_Pick-Oct_2024-blue.svg
    :target: https://www.fz-juelich.de/en/rse/community-initiatives/jurse-code-of-the-month/october-2024
+
 |
 
 CADET-Core
@@ -45,6 +46,18 @@ Features
 * Flexible and extensible through modular design
 * Works on Windows, Linux, and Mac OS X
 
+CADET Platform
+--------------
+
+CADET-Core is part of `CADET <https://github.com/cadet>`_, a collective platform of software repositories that provide tools for biotechnology process modeling.
+CADET-Core can be used as a standalone simulator by interfacing via HDF5 files. Alternatively, CADET-Python provides a wrapper around an HDF5 file reader and writer, simplifying model configuration.
+Furthermore, it is the interface for CADET-Process, an universal and user-friendly tool for biotechnology process modeling and evaluation.
+
+For more information on the different packages of the CADET platform, see :ref:`here <getting_started>`.
+
+.. figure:: getting_started/tutorials/_images/cadet_architecture_overview.png
+
+   Relations between CADET-Core, CADET-Python, and CADET-Process.
 
 Installation
 ------------
@@ -59,7 +72,7 @@ Optionally, use `mamba <https://github.com/mamba-org/mamba>`_ which uses a faste
 
 ``mamba install -c conda-forge cadet``
 
-For more information on how to install and build CADET, see :ref:`here <installation>`.
+For more information on how to install and build CADET, see :ref:`here <getting_started>`.
 
 Ongoing Development
 -------------------
@@ -72,7 +85,7 @@ For non-developers, it is recommended to upgrade from release to release instead
 Bugs
 ----
 
-Please report any bugs that you find `here <https://github.com/cadet/cadet-core/issues>`_. Or, even better, fork the repository on `GitHub <https://github.com/cadet/cadet-core>`_ and create a pull request (PR) with the fix. 
+Please report any bugs that you find `here <https://github.com/cadet/cadet-core/issues>`_. Or, even better, fork the repository on `GitHub <https://github.com/cadet/cadet-core>`_ and create a pull request (PR) with the fix.
 
 Donations
 ---------
@@ -97,6 +110,8 @@ Therefore, we kindly ask that any publications or projects leveraging the capabi
 **Major extensions:**
 
 - Breuer, J. M.; Leweke, S.; Schmölder, J.; Gassner, G.; von Lieres, E.: `Spatial discontinuous Galerkin spectral element method for a family of chromatography models in CADET <https://doi.org/10.1016/j.compchemeng.2023.108340>`_, Computers and Chemical Engineering **177** (2023), 108340.
+
+- Zhang, W.; Przybycien T., Breuer J. M. , Leweke S. , von Lieres E.: `Solving crystallization/precipitation population balance models in CADET, part II: Size-based Smoluchowski coagulation and fragmentation equations in batch and continuous modes <https://doi.org/10.1016/j.compchemeng.2024.108860>`_, Computers and Chemical Engineering **192** (2025), 108860.
 
 - Zhang, W.; Przybycien T., Schmölder J. , Leweke S. , von Lieres E.: `Solving crystallization/precipitation population balance models in CADET, part I: Nucleation growth and growth rate dispersion in batch and continuous modes on nonuniform grids <https://doi.org/10.1016/j.compchemeng.2024.108612>`_, Computers and Chemical Engineering 183 (2024), 108612.
 
@@ -126,5 +141,3 @@ Please refer to the `list of authors and contributors <https://github.com/cadet/
     publications
     zbibliography
     Legal notice <https://www.fz-juelich.de/en/legal-notice>
-
-

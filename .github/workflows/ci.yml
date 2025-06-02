@@ -2,10 +2,42 @@ name: CI
 
 on:
   push:
+    paths-ignore:
+      - 'doc/**'
+      - '.zenodo.json'
+      - 'AUTHORS.md'
+      - 'BUILD-LINUX.md'
+      - 'BUILD-WINDOWS.md'
+      - 'BUILD-OSX.md'
+      - 'CITATION.bib'
+      - 'CLA.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+      - 'LICENSE.txt'
+      - 'README.rst'
+      - 'SECURITY.md'
+      - 'ThirdParty-LICENSES.txt'
+      - 'version.txt'
     branches:
       - master
       - dev
   pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - '.zenodo.json'
+      - 'AUTHORS.md'
+      - 'BUILD-LINUX.md'
+      - 'BUILD-WINDOWS.md'
+      - 'BUILD-OSX.md'
+      - 'CITATION.bib'
+      - 'CLA.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+      - 'LICENSE.txt'
+      - 'README.rst'
+      - 'SECURITY.md'
+      - 'ThirdParty-LICENSES.txt'
+      - 'version.txt'
   workflow_dispatch:
     inputs:
       ref:
@@ -155,15 +187,59 @@ jobs:
           cmake -E make_directory "${BUILD_DIR}"
           cmake -E make_directory "${INSTALL_PREFIX}"
           cd "${BUILD_DIR}"
-          cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" "${SRC_DIR}" -DENABLE_TESTS=ON -DNUM_MAX_AD_DIRS=157
+          cmake -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" "${SRC_DIR}" -DENABLE_TESTS=ON -DNUM_MAX_AD_DIRS=160
           make install -j$(nproc)
-      - name: Check if it runs
+      - name: Check executable
         run: |
           export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:$LD_LIBRARY_PATH
           ${INSTALL_PREFIX}/bin/cadet-cli --version || true
           ${INSTALL_PREFIX}/bin/createLWE
           ${INSTALL_PREFIX}/bin/cadet-cli LWE.h5 || true
-      - name: Run tests
+      - name: Run CI test set I - bindings
+        run: |
+          ${BUILD_DIR}/test/testRunner [CI_binding]
+      - name: Run CI test set II - sensitivities
+        run: |
+          set -e
+          ${BUILD_DIR}/test/testRunner [CI_sens1]
+          ${BUILD_DIR}/test/testRunner [CI_sens2]
+          ${BUILD_DIR}/test/testRunner [CI_sens3]
+          ${BUILD_DIR}/test/testRunner [CI_sens4]
+          ${BUILD_DIR}/test/testRunner [CI_sens5]
+          ${BUILD_DIR}/test/testRunner [CI_sens6]
+          ${BUILD_DIR}/test/testRunner [CI_sens7]
+          ${BUILD_DIR}/test/testRunner [CI_sens8]
+          ${BUILD_DIR}/test/testRunner [CI_sens9]
+          ${BUILD_DIR}/test/testRunner [CI_sens11]
+          ${BUILD_DIR}/test/testRunner [CI_sens12]
+          ${BUILD_DIR}/test/testRunner [CI_sens13]
+          ${BUILD_DIR}/test/testRunner [CI_sens14]
+          ${BUILD_DIR}/test/testRunner [CI_sens15]
+          ${BUILD_DIR}/test/testRunner [CI_sens16]
+      - name: Run CI test set III - crystallization
+        run: |
+          set -e
+          ${BUILD_DIR}/test/testRunner [CI_cry1]
+          ${BUILD_DIR}/test/testRunner [CI_cry2]
+          ${BUILD_DIR}/test/testRunner [CI_cry3]
+          ${BUILD_DIR}/test/testRunner [CI_cry4]
+          ${BUILD_DIR}/test/testRunner [CI_cry5]
+          ${BUILD_DIR}/test/testRunner [CI_cry6]
+          ${BUILD_DIR}/test/testRunner [CI_cry7]
+          ${BUILD_DIR}/test/testRunner [CI_cry8]
+          ${BUILD_DIR}/test/testRunner [CI_cry9]
+          ${BUILD_DIR}/test/testRunner [CI_cry10]
+          ${BUILD_DIR}/test/testRunner [CI_cry11]
+          ${BUILD_DIR}/test/testRunner [CI_cry12]
+          ${BUILD_DIR}/test/testRunner [CI_cry13]
+          ${BUILD_DIR}/test/testRunner [CI_cry14]
+          ${BUILD_DIR}/test/testRunner [CI_cry15]
+          ${BUILD_DIR}/test/testRunner [CI_cry16]
+          ${BUILD_DIR}/test/testRunner [CI_cry17]
+          ${BUILD_DIR}/test/testRunner [CI_cry18]
+          ${BUILD_DIR}/test/testRunner [CI_cry19]
+          ${BUILD_DIR}/test/testRunner [CI_cry20]
+      - name: Run CI test set IV
         run: |
           ${BUILD_DIR}/test/testRunner [CI]
   MacOS:

@@ -158,16 +158,16 @@ bool GeneralRateModelDG::configureModelDiscretization(IParameterProvider& paramP
 	_disc.nNodes = _disc.polyDeg + 1;
 
 	if (paramProvider.exists("NELEM"))
-		_disc.nCol = paramProvider.getInt("NELEM");
+		_disc.nElem = paramProvider.getInt("NELEM");
 	else if (paramProvider.exists("NCOL"))
-		_disc.nCol = std::max(1u, paramProvider.getInt("NCOL") / _disc.nNodes); // number of elements is rounded down
+		_disc.nElem = std::max(1u, paramProvider.getInt("NCOL") / _disc.nNodes); // number of elements is rounded down
 	else
 		throw InvalidParameterException("Specify field NELEM (or NCOL)");
 
-	if (_disc.nCol < 1)
+	if (_disc.nElem < 1)
 		throw InvalidParameterException("Number of column elements must be at least 1!");
 
-	_disc.nPoints = _disc.nNodes * _disc.nCol;
+	_disc.nPoints = _disc.nNodes * _disc.nElem;
 
 	int polynomial_integration_mode = 0;
 	if (paramProvider.exists("EXACT_INTEGRATION"))
@@ -187,12 +187,10 @@ bool GeneralRateModelDG::configureModelDiscretization(IParameterProvider& paramP
 
 	std::vector<int> parPolyDeg(_disc.nParType);
 	std::vector<int> ParNelem(_disc.nParType);
-	std::vector<bool> parExactInt(_disc.nParType, true);
 	if (firstConfigCall)
 	{
 		_disc.parPolyDeg = new unsigned int[_disc.nParType];
 		_disc.nParCell = new unsigned int[_disc.nParType];
-		_disc.parExactInt = new bool[_disc.nParType];
 		_disc.parGSM = new bool[_disc.nParType];
 	}
 
@@ -206,12 +204,6 @@ bool GeneralRateModelDG::configureModelDiscretization(IParameterProvider& paramP
 
 		if ((std::any_of(ParNelem.begin(), ParNelem.end(), [](int value) { return value < 1; })))
 			throw InvalidParameterException("Particle number of elements must be at least 1!");
-
-		if(paramProvider.exists("PAR_EXACT_INTEGRATION"))
-			parExactInt = paramProvider.getBoolArray("PAR_EXACT_INTEGRATION");
-
-		if ((std::any_of(parExactInt.begin(), parExactInt.end(), [](bool value) { return !value; })))
-			LOG(Warning) << "Inexact integration method (cf. PAR_EXACT_INTEGRATION) in particles might add severe! stiffness to the system and disables consistent initialization!";
 
 		if (parPolyDeg.size() == 1)
 		{
@@ -233,16 +225,6 @@ bool GeneralRateModelDG::configureModelDiscretization(IParameterProvider& paramP
 			throw InvalidParameterException("Field PAR_NELEM must have 1 or NPARTYPE (" + std::to_string(_disc.nParType) + ") entries");
 		else
 			std::copy_n(ParNelem.begin(), _disc.nParType, _disc.nParCell);
-		if (parExactInt.size() == 1)
-		{
-			// Multiplex number of particle shells to all particle types
-			for (unsigned int i = 0; i < _disc.nParType; ++i)
-				std::fill(_disc.parExactInt, _disc.parExactInt + _disc.nParType, parExactInt[0]);
-		}
-		else if (parExactInt.size() < _disc.nParType)
-			throw InvalidParameterException("Field PAR_EXACT_INTEGRATION must have 1 or NPARTYPE (" + std::to_string(_disc.nParType) + ") entries");
-		else
-			std::copy_n(parExactInt.begin(), _disc.nParType, _disc.parExactInt);
 	}
 	else if (paramProvider.exists("NPAR"))
 	{
@@ -508,7 +490,7 @@ bool GeneralRateModelDG::configureModelDiscretization(IParameterProvider& paramP
 	}
 
 	unsigned int strideColNode = _disc.nComp;
-	const bool transportSuccess = _convDispOp.configureModelDiscretization(paramProvider, helper, _disc.nComp, polynomial_integration_mode, _disc.nCol, _disc.polyDeg, strideColNode);
+	const bool transportSuccess = _convDispOp.configureModelDiscretization(paramProvider, helper, _disc.nComp, polynomial_integration_mode, _disc.nElem, _disc.polyDeg, strideColNode);
 
 	_disc.curSection = -1;
 
@@ -635,7 +617,7 @@ bool GeneralRateModelDG::configure(IParameterProvider& paramProvider)
 {
 	_parameters.clear();
 
-	const bool firstConfigCall = _disc.offsetSurfDiff == nullptr; // used to not multiply allocate memory
+	const bool firstConfigCall = _disc.deltaR == nullptr; // used to not multiply allocate memory
 
 	const bool transportSuccess = _convDispOp.configure(_unitOpIdx, paramProvider, _parameters);
 
@@ -702,8 +684,6 @@ bool GeneralRateModelDG::configure(IParameterProvider& paramProvider)
 	_filmDiffusionMode = readAndRegisterMultiplexCompTypeSecParam(paramProvider, _parameters, _filmDiffusion, "FILM_DIFFUSION", _disc.nParType, _disc.nComp, _unitOpIdx);
 	_parDiffusionMode = readAndRegisterMultiplexCompTypeSecParam(paramProvider, _parameters, _parDiffusion, "PAR_DIFFUSION", _disc.nParType, _disc.nComp, _unitOpIdx);
 
-	if (firstConfigCall)
-		_disc.offsetSurfDiff = new unsigned int[_disc.strideBound[_disc.nParType]];
 	if (paramProvider.exists("PAR_SURFDIFFUSION"))
 		_parSurfDiffusionMode = readAndRegisterMultiplexBndCompTypeSecParam(paramProvider, _parameters, _parSurfDiffusion, "PAR_SURFDIFFUSION", _disc.nParType, _disc.nComp, _disc.strideBound, _disc.nBound, _unitOpIdx);
 	else
@@ -943,9 +923,6 @@ void GeneralRateModelDG::useAnalyticJacobian(const bool analyticJac)
 
 void GeneralRateModelDG::notifyDiscontinuousSectionTransition(double t, unsigned int secIdx, const ConstSimulationState& simState, const AdJacobianParams& adJac)
 {
-	// calculate offsets between surface diffusion storage and state vector order
-	orderSurfDiff();
-
 	Indexer idxr(_disc);
 
 	// todo: only reset jacobian pattern if it changes, i.e. once in configuration and then only for changes in SurfDiff+kinetic binding.
@@ -1367,14 +1344,9 @@ int GeneralRateModelDG::residualParticle(double t, unsigned int parType, unsigne
 
 	LinearBufferAllocator tlmAlloc = threadLocalMem.get();
 
-	// Special case: individual treatment of time derivatives in particle mass balance at inner particle boundary node
-	bool specialCase = !_disc.parExactInt[parType] && (_parGeomSurfToVol[parType] != _disc.SurfVolRatioSlab && _parCoreRadius[parType] == 0.0);
-
 	// Prepare parameters
 	active const* const parDiff = getSectionDependentSlice(_parDiffusion, _disc.nComp * _disc.nParType, secIdx) + parType * _disc.nComp;
 
-	// Ordering of particle surface diffusion:
-	// bnd0comp0, bnd0comp1, bnd0comp2, bnd1comp0, bnd1comp1, bnd1comp2
 	active const* const parSurfDiff = getSectionDependentSlice(_parSurfDiffusion, _disc.strideBound[_disc.nParType], secIdx) + _disc.nBoundBeforeType[parType];
 
 	// Relative position of current node - needed in externally dependent adsorption kinetic
@@ -1408,62 +1380,14 @@ int GeneralRateModelDG::residualParticle(double t, unsigned int parType, unsigne
 			);
 		const ColumnPosition colPos{ z, 0.0, r };
 
-		// Handle time derivatives, binding, dynamic reactions.
-		// Special case: Dont add time derivatives to inner boundary node for DG discretized mass balance equations.
-		// This can be achieved by setting yDot pointer to null before passing to residual kernel, and adding only the time derivative for dynamic binding
-		// TODO Check Treatment of reactions (do we need yDot then?)
-		if (cadet_unlikely(par == 0 && specialCase))
-		{
-			if (wantRes)
-				parts::cell::residualKernel<StateType, ResidualType, ParamType, parts::cell::CellParameters, linalg::BandedEigenSparseRowIterator, wantJac, true>(
-					t, secIdx, colPos, local_y, nullptr, local_res, jac, cellResParams, tlmAlloc // TODO Check Treatment of reactions (do we need yDot then?)
-				);
-			else
-				parts::cell::residualKernel<StateType, ResidualType, ParamType, parts::cell::CellParameters, linalg::BandedEigenSparseRowIterator, wantJac, false, false>(
-					t, secIdx, colPos, local_y, nullptr, local_res, jac, cellResParams, tlmAlloc // TODO Check Treatment of reactions (do we need yDot then?)
-				);
-
-			if (!wantRes)
-				continue;
-
-			if (cellResParams.binding->hasDynamicReactions() && local_yDot)
-			{
-				unsigned int idx = 0;
-				for (unsigned int comp = 0; comp < cellResParams.nComp; ++comp)
-				{
-					for (unsigned int state = 0; state < cellResParams.nBound[comp]; ++state, ++idx)
-					{
-						// Skip quasi-stationary fluxes
-						if (cellResParams.qsReaction[idx])
-							continue;
-
-						// For kinetic bindings and surface diffusion, we have an additional DG-discretized mass balance eq.
-						// -> add time derivate at inner bonudary node only without surface diffusion 
-						else if (_hasSurfaceDiffusion[parType])
-							continue;
-						// Some bound states might still not be effected by surface diffusion
-						else if (parSurfDiff[idx] != 0.0)
-							continue;
-
-						// Add time derivative to solid phase
-						local_res[idxr.strideParLiquid() + idx] += local_yDot[idxr.strideParLiquid() + idx];
-					}
-				}
-			}
-		}
+		if (wantRes)
+			parts::cell::residualKernel<StateType, ResidualType, ParamType, parts::cell::CellParameters, linalg::BandedEigenSparseRowIterator, wantJac, true>(
+				t, secIdx, colPos, local_y, local_yDot, local_res, jac, cellResParams, tlmAlloc
+			);
 		else
-		{
-			if (wantRes)
-				parts::cell::residualKernel<StateType, ResidualType, ParamType, parts::cell::CellParameters, linalg::BandedEigenSparseRowIterator, wantJac, true>(
-					t, secIdx, colPos, local_y, local_yDot, local_res, jac, cellResParams, tlmAlloc
-				);
-			else
-			{
-				parts::cell::residualKernel<StateType, ResidualType, ParamType, parts::cell::CellParameters, linalg::BandedEigenSparseRowIterator, wantJac, false, false>(
-					t, secIdx, colPos, local_y, local_yDot, local_res, jac, cellResParams, tlmAlloc
-				);
-			}
-		}
+			parts::cell::residualKernel<StateType, ResidualType, ParamType, parts::cell::CellParameters, linalg::BandedEigenSparseRowIterator, wantJac, false, false>(
+				t, secIdx, colPos, local_y, local_yDot, local_res, jac, cellResParams, tlmAlloc
+			);
 
 		// Move rowiterator to next particle node
 		jac += idxr.strideParNode(parType);
@@ -1513,11 +1437,11 @@ int GeneralRateModelDG::residualParticle(double t, unsigned int parType, unsigne
 
 			for (int bnd = 0; bnd < _disc.nBound[parType * _disc.nComp + comp]; bnd++)
 			{
-				if (parSurfDiff[getOffsetSurfDiff(parType, comp, bnd)] != 0.0) // some bound states might still not be effected by surface diffusion
+				if (parSurfDiff[_disc.boundOffset[parType * _disc.nComp + comp] + bnd] != 0.0) // some bound states might still not be effected by surface diffusion
 				{
 					Eigen::Map<const Vector<StateType, Dynamic>, 0, InnerStride<Dynamic>> c_s(c_p + _disc.nComp + idxr.offsetBoundComp(ParticleTypeIndex{ parType }, ComponentIndex{ comp }) + bnd, nPoints, InnerStride<Dynamic>(idxr.strideParNode(parType)));
 					ParamType invBetaP = (1.0 - static_cast<ParamType>(_parPorosity[parType])) / (static_cast<ParamType>(_poreAccessFactor[_disc.nComp * parType + comp]) * static_cast<ParamType>(_parPorosity[parType]));
-					sum_cp_cs += invBetaP * static_cast<ParamType>(parSurfDiff[getOffsetSurfDiff(parType, comp, bnd)]) * c_s;
+					sum_cp_cs += invBetaP * static_cast<ParamType>(parSurfDiff[_disc.boundOffset[parType * _disc.nComp + comp] + bnd]) * c_s;
 
 					/* For kinetic bindings with surface diffusion: add the additional DG-discretized particle mass balance equations to residual */
 
@@ -1532,7 +1456,7 @@ int GeneralRateModelDG::residualParticle(double t, unsigned int parType, unsigne
 
 						// Apply squared inverse mapping and surface diffusion
 						c_s_modified = 2.0 / static_cast<ParamType>(_disc.deltaR[_disc.offsetMetric[parType]]) * 2.0 / static_cast<ParamType>(_disc.deltaR[_disc.offsetMetric[parType]]) *
-							static_cast<ParamType>(parSurfDiff[getOffsetSurfDiff(parType, comp, bnd)]) * c_s;
+							static_cast<ParamType>(parSurfDiff[_disc.boundOffset[parType * _disc.nComp + comp] + bnd]) * c_s;
 
 						Eigen::Map<const Vector<ResidualType, Dynamic>, 0, InnerStride<Dynamic>> c_s_modified_const(&c_s_modified[0], nPoints, InnerStride<Dynamic>(1));
 						parGSMVolumeIntegral<ResidualType, ResidualType>(parType, c_s_modified_const, resCs);
@@ -1579,7 +1503,7 @@ int GeneralRateModelDG::residualParticle(double t, unsigned int parType, unsigne
 			{
 				for (int bnd = 0; bnd < _disc.nBound[parType * _disc.nComp + comp]; bnd++)
 				{
-					if (parSurfDiff[getOffsetSurfDiff(parType, comp, bnd)] != 0.0) // some bound states might still not be effected by surface diffusion
+					if (parSurfDiff[_disc.boundOffset[parType * _disc.nComp + comp] + bnd] != 0.0) // some bound states might still not be effected by surface diffusion
 					{
 						// Get solid phase vector
 						Eigen::Map<const Vector<StateType, Dynamic>, 0, InnerStride<Dynamic>> c_s(c_p + strideParLiquid + idxr.offsetBoundComp(ParticleTypeIndex{ parType }, ComponentIndex{ comp }) + bnd,
@@ -1587,7 +1511,7 @@ int GeneralRateModelDG::residualParticle(double t, unsigned int parType, unsigne
 						// Compute g_s = d c_s / d xi
 						solve_auxiliary_DG<StateType>(parType, c_s, strideCell, strideNode, comp);
 						// Apply invBeta_p, d_s and add to sum -> gSum += d_s * invBeta_p * (D c - M^-1 B [c - c^*])
-						_g_pSum += _g_p.template cast<ResidualType>() * invBetaP * static_cast<ParamType>(parSurfDiff[getOffsetSurfDiff(parType, comp, bnd)]);
+						_g_pSum += _g_p.template cast<ResidualType>() * invBetaP * static_cast<ParamType>(parSurfDiff[_disc.boundOffset[parType * _disc.nComp + comp] + bnd]);
 
 						/* For kinetic bindings with surface diffusion: add the additional DG-discretized particle mass balance equations to residual */
 
@@ -1606,7 +1530,7 @@ int GeneralRateModelDG::residualParticle(double t, unsigned int parType, unsigne
 							Eigen::Map<Vector<ResidualType, Dynamic>, 0, InnerStride<>> _g_p_ResType(reinterpret_cast<ResidualType*>(&_disc.g_p[parType][0]), nPoints, InnerStride<>(1));
 
 							applyParInvMap<ResidualType, ParamType>(_g_p_ResType, parType);
-							_g_p_ResType *= static_cast<ParamType>(parSurfDiff[getOffsetSurfDiff(parType, comp, bnd)]);
+							_g_p_ResType *= static_cast<ParamType>(parSurfDiff[_disc.boundOffset[parType * _disc.nComp + comp] + bnd]);
 
 							// Eigen access to auxiliary variable of current bound state
 							Eigen::Map<const Vector<ResidualType, Dynamic>, 0, InnerStride<Dynamic>> _g_p_ResType_const(&_g_p_ResType[0], nPoints, InnerStride<Dynamic>(1));
@@ -1798,7 +1722,7 @@ void GeneralRateModelDG::multiplyWithJacobian(const SimulationTime& simTime, con
 
 	// Map inlet DOFs to the column inlet (first bulk cells)
 	// Inlet at z = 0 for forward flow, at z = L for backward flow.
-	unsigned int offInlet = _convDispOp.forwardFlow() ? 0 : (_disc.nCol - 1u) * idxr.strideColCell();
+	unsigned int offInlet = _convDispOp.forwardFlow() ? 0 : (_disc.nElem - 1u) * idxr.strideColCell();
 
 	for (unsigned int comp = 0; comp < _disc.nComp; comp++) {
 		for (unsigned int node = 0; node < (_disc.exactInt ? _disc.nNodes : 1); node++) {
@@ -2231,7 +2155,7 @@ bool GeneralRateModelDG::setParameter(const ParameterId& pId, double value)
 			return true;
 		if (multiplexCompTypeSecParameterValue(pId, hashString("PAR_DIFFUSION"), _parDiffusionMode, _parDiffusion, _disc.nParType, _disc.nComp, value, nullptr))
 			return true;
-		if (multiplexBndCompTypeSecParameterValue(pId, hashString("PAR_SURFDIFFUSION"), _parSurfDiffusionMode, _parSurfDiffusion, _disc.nParType, _disc.nComp, _disc.strideBound, _disc.nBound, _disc.boundOffset, value, nullptr))
+		if (multiplexBndCompTypeSecParameterValue(pId, hashString("PAR_SURFDIFFUSION"), _parSurfDiffusionMode, _parSurfDiffusion, _disc.nParType, _disc.nComp, _disc.strideBound, _disc.nBound, _disc.boundOffset, _disc.nBoundBeforeType, value, nullptr))
 			return true;
 		const int mpIc = multiplexInitialConditions(pId, value, false);
 		if (mpIc > 0)
@@ -2265,6 +2189,9 @@ bool GeneralRateModelDG::setParameter(const ParameterId& pId, double value)
 
 		if (_convDispOp.setParameter(pId, value))
 			return true;
+
+		if (model::setParameter(pId, value, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return true;
 	}
 
 	const bool result = UnitOperationBase::setParameter(pId, value);
@@ -2284,6 +2211,12 @@ bool GeneralRateModelDG::setParameter(const ParameterId& pId, int value)
 	if (model::setParameter(pId, value, _parDepSurfDiffusion, _singleParDepSurfDiffusion))
 		return true;
 
+	if (pId.unitOperation == _unitOpIdx)
+	{
+		if (model::setParameter(pId, value, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return true;
+	}
+
 	return UnitOperationBase::setParameter(pId, value);
 }
 
@@ -2294,6 +2227,12 @@ bool GeneralRateModelDG::setParameter(const ParameterId& pId, bool value)
 
 	if (model::setParameter(pId, value, _parDepSurfDiffusion, _singleParDepSurfDiffusion))
 		return true;
+
+	if (pId.unitOperation == _unitOpIdx)
+	{
+		if (model::setParameter(pId, value, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return true;
+	}
 
 	return UnitOperationBase::setParameter(pId, value);
 }
@@ -2308,7 +2247,7 @@ void GeneralRateModelDG::setSensitiveParameterValue(const ParameterId& pId, doub
 			return;
 		if (multiplexCompTypeSecParameterValue(pId, hashString("PAR_DIFFUSION"), _parDiffusionMode, _parDiffusion, _disc.nParType, _disc.nComp, value, &_sensParams))
 			return;
-		if (multiplexBndCompTypeSecParameterValue(pId, hashString("PAR_SURFDIFFUSION"), _parSurfDiffusionMode, _parSurfDiffusion, _disc.nParType, _disc.nComp, _disc.strideBound, _disc.nBound, _disc.boundOffset, value, &_sensParams))
+		if (multiplexBndCompTypeSecParameterValue(pId, hashString("PAR_SURFDIFFUSION"), _parSurfDiffusionMode, _parSurfDiffusion, _disc.nParType, _disc.nComp, _disc.strideBound, _disc.nBound, _disc.boundOffset, _disc.nBoundBeforeType, value, &_sensParams))
 			return;
 		if (multiplexInitialConditions(pId, value, true) != 0)
 			return;
@@ -2342,6 +2281,9 @@ void GeneralRateModelDG::setSensitiveParameterValue(const ParameterId& pId, doub
 
 		if (_convDispOp.setSensitiveParameterValue(_sensParams, pId, value))
 			return;
+
+		if (model::setSensitiveParameterValue(pId, value, _sensParams, std::vector<IDynamicReactionModel*>{ _dynReactionBulk }, true))
+			return;
 	}
 
 	UnitOperationBase::setSensitiveParameterValue(pId, value);
@@ -2373,7 +2315,7 @@ bool GeneralRateModelDG::setSensitiveParameter(const ParameterId& pId, unsigned 
 			return true;
 		}
 
-		if (multiplexBndCompTypeSecParameterAD(pId, hashString("PAR_SURFDIFFUSION"), _parSurfDiffusionMode, _parSurfDiffusion, _disc.nParType, _disc.nComp, _disc.strideBound, _disc.nBound, _disc.boundOffset, adDirection, adValue, _sensParams))
+		if (multiplexBndCompTypeSecParameterAD(pId, hashString("PAR_SURFDIFFUSION"), _parSurfDiffusionMode, _parSurfDiffusion, _disc.nParType, _disc.nComp, _disc.strideBound, _disc.nBound, _disc.boundOffset, _disc.nBoundBeforeType, adDirection, adValue, _sensParams))
 		{
 			LOG(Debug) << "Found parameter " << pId << ": Dir " << adDirection << " is set to " << adValue;
 			return true;
@@ -2433,6 +2375,12 @@ bool GeneralRateModelDG::setSensitiveParameter(const ParameterId& pId, unsigned 
 		if (_convDispOp.setSensitiveParameter(_sensParams, pId, adDirection, adValue))
 		{
 			LOG(Debug) << "Found parameter " << pId << ": Dir " << adDirection << " is set to " << adValue;
+			return true;
+		}
+
+		if (model::setSensitiveParameter(pId, adDirection, adValue, _sensParams, std::vector<IDynamicReactionModel*> { _dynReactionBulk }, true))
+		{
+			LOG(Debug) << "Found parameter " << pId << " in DynamicBulkReactionModel: Dir " << adDirection << " is set to " << adValue;
 			return true;
 		}
 	}

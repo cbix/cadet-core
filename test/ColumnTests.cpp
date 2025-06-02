@@ -206,12 +206,25 @@ namespace column
 		jpp.pushScope("discretization");
 		jpp.set("SPATIAL_METHOD", "DG");
 
-		if (exactIntegration > -1)
-			jpp.set("EXACT_INTEGRATION", exactIntegration);
-		if (polyDeg)
-			jpp.set("POLYDEG", polyDeg);
-		if (nElem)
-			jpp.set("NELEM", nElem);
+		if (radPolyDeg)
+		{
+			jpp.set("RAD_POLYDEG", radPolyDeg);
+			if (radNelem)
+				jpp.set("RAD_NELEM", radNelem);
+			if (polyDeg)
+				jpp.set("AX_POLYDEG", polyDeg);
+			if (nElem)
+				jpp.set("AX_NELEM", nElem);
+		}
+		else
+		{
+			if (exactIntegration > -1)
+				jpp.set("EXACT_INTEGRATION", exactIntegration);
+			if (polyDeg)
+				jpp.set("POLYDEG", polyDeg);
+			if (nElem)
+				jpp.set("NELEM", nElem);
+		}
 		if (parNelem)
 			jpp.set("PAR_NELEM", parNelem);
 		if (parPolyDeg)
@@ -431,12 +444,12 @@ namespace column
 		{
 			pp.pushScope("discretization");
 			nlohmann::json discretization = setupJson["model"]["unit_" + unitID]["discretization"];
+			discretization["USE_ANALYTIC_JACOBIAN"] = 1;
+
 			if (pp.exists("NBOUND"))
 				discretization["NBOUND"] = pp.getIntArray("NBOUND"); // note: in the future this might be included somewhere else in the setup as its part of the model
 			if (pp.exists("RECONSTRUCTION"))
 				discretization["RECONSTRUCTION"] = pp.getString("RECONSTRUCTION");
-			if (pp.exists("USE_ANALYTIC_JACOBIAN"))
-				discretization["USE_ANALYTIC_JACOBIAN"] = pp.getInt("USE_ANALYTIC_JACOBIAN");
 			if (pp.exists("GS_TYPE"))
 				discretization["GS_TYPE"] = pp.getInt("GS_TYPE");
 			if (pp.exists("MAX_KRYLOV"))
@@ -843,10 +856,10 @@ namespace column
 
 		cadet::IUnitOperation* const unitAna = unitoperation::createAndConfigureUnit(jpp, *mb);
 		cadet::IUnitOperation* const unitAD = unitoperation::createAndConfigureUnit(jpp, *mb);
+		unitAD->useAnalyticJacobian(false);
 
 		// Enable AD
 		REQUIRE(unitAD->requiredADdirs() <= cadet::ad::getMaxDirections());
-		unitAD->useAnalyticJacobian(false);
 		cadet::ad::setDirections(unitAD->requiredADdirs());
 
 		cadet::active* adRes = new cadet::active[unitAD->numDofs()];
@@ -886,8 +899,11 @@ namespace column
 		std::fill(jacDir.begin(), jacDir.end(), 0.0);
 
 		// Compare Jacobians
-		cadet::test::checkJacobianPatternFD(unitAna, unitAD, y.data(), nullptr, jacDir.data(), jacCol1.data(), jacCol2.data(), tls, absTolFDpattern);
-		cadet::test::checkJacobianPatternFD(unitAna, unitAna, y.data(), nullptr, jacDir.data(), jacCol1.data(), jacCol2.data(), tls, absTolFDpattern);
+		if (absTolFDpattern < 1E+10)
+		{
+			cadet::test::checkJacobianPatternFD(unitAna, unitAD, y.data(), nullptr, jacDir.data(), jacCol1.data(), jacCol2.data(), tls, absTolFDpattern);
+			cadet::test::checkJacobianPatternFD(unitAna, unitAna, y.data(), nullptr, jacDir.data(), jacCol1.data(), jacCol2.data(), tls, absTolFDpattern);
+		}
 		cadet::test::compareJacobian(unitAna, unitAD, nullptr, nullptr, jacDir.data(), jacCol1.data(), jacCol2.data(), absTolAD);
 //				cadet::test::compareJacobianFD(unitAna, unitAD, y.data(), nullptr, jacDir.data(), jacCol1.data(), jacCol2.data());
 
