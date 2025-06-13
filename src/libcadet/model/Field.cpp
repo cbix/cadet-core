@@ -45,7 +45,7 @@ bool Field::configure(IParameterProvider *paramProvider) {
     size *= dimCoords.size();
     _shape.push_back(dimCoords.size());
     _dimensions.push_back(dimCoords);
-    LOG(Debug) << dim << " size=" << dimCoords.size() << ", coords=" << dimCoords;
+    LOG(Debug) << "field dim " << dim << " size=" << dimCoords.size() << ", coords=" << dimCoords;
   }
   _data = paramProvider->getDoubleArray("DATA");
   if (_data.size() != size) {
@@ -138,7 +138,7 @@ double Field::interpolateValue(std::vector<double> coords) {
   for (field_bound_sample_t s : boundSamples) {
     result += valueAtIndex(s.idx) * s.weight;
   }
-  LOG(Debug) << "interpolation result = " << result;
+  LOG(Debug) << "field interpolation result = " << result;
   return result;
 }
 
