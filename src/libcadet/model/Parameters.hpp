@@ -1532,6 +1532,83 @@ public:
 	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
 };
 
+/**
+ * @brief Scalar field-based component dependent parameter
+ * @details Just a single value.
+ */
+class FieldScalarComponentDependentParameter
+{
+public:
+
+	/**
+	 * @brief Underlying type
+	 */
+	typedef active storage_t;
+
+	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void registerParam(const std::string& varName, std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void reserve(unsigned int nReactions, unsigned int nComp, unsigned int nBoundStates) { }
+
+	inline void update(active& result, double extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		update(&result, extVal, nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Calculates a parameter in order to take the external profile into account
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void update(active* result, double extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		*result = extVal;
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(active& result, double extVal, double extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		updateTimeDerivative(&result, extVal, extTimeDiff, nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(active* result, double extVal, double extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		*result = extTimeDiff;
+	}
+
+	//inline storage_t& base() CADET_NOEXCEPT { return 0; }
+	//inline const storage_t& base() const CADET_NOEXCEPT { return 0; }
+
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT { return 0; }
+
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int nBoundStates) const CADET_NOEXCEPT { return 0; }
+
+	template <typename T>
+	inline void prepareCache(T& cache, LinearBufferAllocator& buffer) const { }
+
+	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
+};
+
 
 }  // namespace model
 
