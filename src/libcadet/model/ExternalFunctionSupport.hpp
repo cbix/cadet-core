@@ -21,10 +21,8 @@
 #include "cadet/ExternalFunction.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/Field.hpp"
- 
-#include "LoggingUtils.hpp"
 #include "Logging.hpp"
-
+#include "LoggingUtils.hpp"
 #include "SimulationTypes.hpp"
 
 #include <vector>

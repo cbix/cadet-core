@@ -374,8 +374,8 @@ protected:
 	}
 
 	// Handlers provide configure(), reserve(), and registerParam() for parameters
-	ExternalScalarComponentDependentParameter _kA; //!< Handler for adsorption rate
-	ExternalScalarComponentDependentParameter _kD; //!< Handler for desorption rate
+	FieldScalarParameter _kA; //!< Handler for adsorption rate
+	FieldScalarParameter _kD; //!< Handler for desorption rate
 };
 
 
@@ -877,6 +877,7 @@ protected:
 
 typedef LinearBindingBase<LinearParamHandler> LinearBinding;
 typedef LinearBindingBase<ExtLinearParamHandler> ExternalLinearBinding;
+typedef LinearBindingBase<FieldLinearParamHandler> FieldLinearBinding;
 
 namespace binding
 {
@@ -884,6 +885,7 @@ namespace binding
 	{
 		bindings[LinearBinding::identifier()] = []() { return new LinearBinding(); };
 		bindings[ExternalLinearBinding::identifier()] = []() { return new ExternalLinearBinding(); };
+		bindings[FieldLinearBinding::identifier()] = []() { return new FieldLinearBinding(); };
 	}
 }  // namespace binding
 

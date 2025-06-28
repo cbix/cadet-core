@@ -32,6 +32,9 @@
 #include <type_traits>
 #include <algorithm>
 
+#include "cadet/Logging.hpp"
+#include "common/LoggerBase.hpp"
+
 namespace cadet
 {
 
@@ -1468,7 +1471,9 @@ public:
 	 */
 	typedef active storage_t;
 
-	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates) { }
+	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates) {
+		paramProvider.getIntArray(varName + "_EXTFUN");
+	}
 
 	inline void registerParam(const std::string& varName, std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates) { }
 
