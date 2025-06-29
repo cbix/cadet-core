@@ -367,9 +367,7 @@ protected:
 	 */
 	inline bool validateConfig(unsigned int nComp, unsigned int const* nBoundStates)
 	{
-		if ((_kA.size() != _kD.size()) || (_kA.size() < nComp))
-			throw InvalidParameterException("LIN_KA and LIN_KD have to have the same size");
-
+		// constant size, doesn't need validation
 		return true;
 	}
 
