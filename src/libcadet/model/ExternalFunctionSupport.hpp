@@ -214,6 +214,24 @@ namespace model
 		}
 	};
 
+	/**
+	 * @brief Base class of model parameter storage classes that depend on a field
+	 */
+	struct FieldParamHandlerBase
+	{
+	public:
+
+		inline void setFields(Field** fields, unsigned int size) { }
+
+	protected:
+
+		std::vector<Field*> _fields; //!< Pointer to the field
+		std::vector<int> _fieldIndexes; //!< Index to the field
+
+		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
+
+	};
+
 }  // namespace model
 
 }  // namespace cadet

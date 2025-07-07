@@ -189,7 +189,7 @@ protected:
 /**
  * @brief Handles linear binding model parameters that depend on a field
  */
-class FieldLinearParamHandler : public ExternalParamHandlerBase
+class FieldLinearParamHandler : public FieldParamHandlerBase
 {
 public:
 
@@ -233,7 +233,7 @@ public:
 		_kD.configure("LIN_KD", paramProvider, nComp, nBoundStates);
 		
 		// Number of externally dependent parameters (2) needs to be given to ExternalParamHandlerBase::configure()
-		ExternalParamHandlerBase::configure(paramProvider, 2);
+		FieldParamHandlerBase::configure(paramProvider, 2);
 		return validateConfig(nComp, nBoundStates);
 	}
 
