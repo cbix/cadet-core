@@ -35,12 +35,11 @@ bool Field::configure(IParameterProvider *paramProvider) {
   if (!paramProvider)
     return false;
 
-  std::vector<std::string> dimNames =
-      paramProvider->getStringArray("DIMENSIONS");
+  _dimNames = paramProvider->getStringArray("DIMENSIONS");
   LOG(Debug) << "Field::configure";
-  LOG(Debug) << "field dims: " << dimNames;
+  LOG(Debug) << "field dims: " << _dimNames;
   size_t size = 1;
-  for (std::string dim : dimNames) {
+  for (std::string dim : _dimNames) {
     std::vector dimCoords = paramProvider->getDoubleArray("COORD_" + dim);
     size *= dimCoords.size();
     _shape.push_back(dimCoords.size());

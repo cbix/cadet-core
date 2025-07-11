@@ -232,8 +232,8 @@ public:
 		_kA.configure("LIN_KA", paramProvider, nComp, nBoundStates);
 		_kD.configure("LIN_KD", paramProvider, nComp, nBoundStates);
 		
-		// Number of externally dependent parameters (2) needs to be given to ExternalParamHandlerBase::configure()
-		FieldParamHandlerBase::configure(paramProvider, 2);
+		// configure number of parameters and order in which coordinates are passed when evaluating field
+		FieldParamHandlerBase::configure(paramProvider, 2, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
 		return validateConfig(nComp, nBoundStates);
 	}
 

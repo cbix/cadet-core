@@ -223,12 +223,95 @@ namespace model
 
 		inline void setFields(Field** fields, unsigned int size) { }
 
+		/*
+		inline void setExternalFunctions(IExternalFunction** extFuns, int size)
+		{
+			_extFun.clear();
+			_extFun.resize(_extFunIndex.size(), nullptr);
+			for (std::size_t i = 0; i < _extFunIndex.size(); ++i)
+			{
+				if ((_extFunIndex[i] >= 0) && (_extFunIndex[i] < size))
+					_extFun[i] = extFuns[_extFunIndex[i]];
+				else
+				{
+					_extFun[i] = nullptr;
+					LOG(Warning) << "Index " << _extFunIndex[i] << " exceeds number of passed external functions (" << size << "), external dependence is ignored";
+				}
+			}
+		}
+		*/
+		static bool dependsOnTime() CADET_NOEXCEPT { return true; }
+		static bool requiresWorkspace() CADET_NOEXCEPT { return true; }
+
 	protected:
 
 		std::vector<Field*> _fields; //!< Pointer to the field
 		std::vector<int> _fieldIndexes; //!< Index to the field
 
 		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
+
+		/**
+		 * @brief Configures the external data source of this externally dependent parameter set
+		 * @param [in] paramProvider Parameter provider
+		 * @param [in] nParams Number of externally dependent parameters (also size of buffer)
+		 * @param [in] dimensions 
+		 */
+		inline void configure(IParameterProvider& paramProvider, unsigned int nParams, std::vector<std::string> dimensions)
+		{			
+			std::vector<int> idx;
+			if (paramProvider.exists("EXTFUN"))
+				idx = paramProvider.getIntArray("EXTFUN");
+
+			if (idx.size() >= nParams)
+				_extFunIndex = idx;
+			else
+			{
+				_extFunIndex.resize(nParams);
+				if (!idx.empty())
+				{
+					// Use one external function for all parameters
+					std::fill(_extFunIndex.begin(), _extFunIndex.end(), idx[0]);
+				}
+				else
+				{
+					// There is no external dependence configured
+					std::fill(_extFunIndex.begin(), _extFunIndex.end(), -1);
+				}
+			}
+		}
+
+		inline void evaluateExternalFunctions(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nParams, double* buffer) const
+		{
+			for (unsigned int i = 0; i < nParams; ++i)
+			{
+				IExternalFunction* const fun = _extFun[i];
+				if (fun)
+					buffer[i] = fun->externalProfile(t, colPos.axial, colPos.radial, colPos.particle, secIdx);
+				else
+					buffer[i] = 0.0;
+			}
+		}
+
+		/**
+		 * @brief Evaluates the time derivative of the external functions for the different parameters
+		 * @param [in] t Current time
+		 * @param [in] z Axial coordinate in the column
+		 * @param [in] r Radial coordinate in the bead
+		 * @param [in] secIdx Index of the current section
+		 * @param [in] nParams Number of externally dependent parameters (also size of buffer)
+		 * @param [out] buffer Buffer that holds time derivatives of each external function
+		 */
+		inline void evaluateTimeDerivativeExternalFunctions(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nParams, double* buffer) const
+		{
+			for (unsigned int i = 0; i < nParams; ++i)
+			{
+				IExternalFunction* const fun = _extFun[i];
+				if (fun)
+					buffer[i] = fun->timeDerivative(t, colPos.axial, colPos.radial, colPos.particle, secIdx);
+				else
+					buffer[i] = 0.0;
+			}
+		}
 
 	};
 

@@ -50,6 +50,8 @@ public:
    */
   bool configure(IParameterProvider *paramProvider);
 
+  std::vector<int> dimensionMap(std::vector<std::string>);
+
   double valueAtIndex(std::vector<size_t> idx);
 
   double interpolateValue(std::vector<double> coords);
@@ -61,6 +63,7 @@ private:
   std::vector<size_t> _shape;
   //std::vector<std::pair<std::string, std::vector<double>>> _dimensions;
   std::vector<std::vector<double>> _dimensions;
+  std::vector<std::string> _dimNames;
   std::vector<double> _data;
 };
 
