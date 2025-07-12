@@ -22,6 +22,7 @@
 #include "cadet/LibExportImport.hpp"
 #include "cadet/cadetCompilerInfo.hpp"
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -50,7 +51,7 @@ public:
    */
   bool configure(IParameterProvider *paramProvider);
 
-  std::vector<int> dimensionMap(std::vector<std::string>);
+  std::vector<int> dimensionMap(std::vector<std::string> dims);
 
   double valueAtIndex(std::vector<size_t> idx);
 
@@ -64,6 +65,7 @@ private:
   //std::vector<std::pair<std::string, std::vector<double>>> _dimensions;
   std::vector<std::vector<double>> _dimensions;
   std::vector<std::string> _dimNames;
+  std::map<std::string, size_t> _dimNamesMap;
   std::vector<double> _data;
 };
 

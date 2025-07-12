@@ -55,6 +55,19 @@ bool Field::configure(IParameterProvider *paramProvider) {
   return true;
 }
 
+std::vector<int> Field::dimensionMap(std::vector<std::string> dims)
+{
+  auto res = std::vector<int>();
+  for (std::string dimName : dims)
+  {
+    if (auto dimIdx = _dimNamesMap.find(dimName); dimIdx != _dimNamesMap.end())
+      res.push_back(dimIdx->second);
+    else
+      res.push_back(-1);
+  }
+  return res;
+}
+
 double Field::valueAtIndex(std::vector<size_t> idx) {
   LOG(Debug) << "valueAtIndex" << idx;
   size_t n = _dimensions.size();

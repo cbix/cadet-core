@@ -247,6 +247,7 @@ namespace model
 
 		std::vector<Field*> _fields; //!< Pointer to the field
 		std::vector<int> _fieldIndexes; //!< Index to the field
+		std::vector<std::vector<int>> _dimensionMaps;
 
 		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
 
@@ -278,17 +279,35 @@ namespace model
 					std::fill(_extFunIndex.begin(), _extFunIndex.end(), -1);
 				}
 			}
+
+			for (unsigned int i = 0; i < _fields.size()) {
+				Field* field = _fields[i];
+				if (field) {
+					_dimensionMaps[i] = field->dimensionMap(dimensions);
+				}
+			}
 		}
 
-		inline void evaluateExternalFunctions(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nParams, double* buffer) const
+		inline void evaluateField(std::vector<double> coords, unsigned int nParams, double* buffer) const
 		{
+
 			for (unsigned int i = 0; i < nParams; ++i)
 			{
-				IExternalFunction* const fun = _extFun[i];
-				if (fun)
-					buffer[i] = fun->externalProfile(t, colPos.axial, colPos.radial, colPos.particle, secIdx);
+				Field* const field = _fields[i];
+				std::vector<int> dimMap = _dimensionMaps[i];
+				if (field)
+				{
+					std::vector<double> mappedCoords = {};
+					for (unsigned int dimIdx = 0; dimIdx < coords.size(); ++dimIdx)
+					{
+						mappedCoords[dimIdx] = dimMap[dimIdx];
+					}
+					buffer[i] = field->interpolateValue(mappedCoords);
+				}
 				else
+				{
 					buffer[i] = 0.0;
+				}
 			}
 		}
 
