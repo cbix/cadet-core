@@ -97,7 +97,7 @@ namespace model
 
 		inline void setFields(Field** field, int size)
 		{
-			// TODO implementation
+			// only implemented for FieldParamHandlerBase
 		}
 
 		/**
@@ -240,13 +240,30 @@ namespace model
 			}
 		}
 		*/
+
+		inline void setFields(Field** fields, int size)
+		{
+			_fields.clear();
+			_fields.resize(_fieldIndexes.size(), nullptr);
+			for (size_t i = 0; i < _fieldIndexes.size(); ++i)
+			{
+				if (_fieldIndexes[i] >= 0 && _fieldIndexes[i] < size)
+					_fields[i] = fields[_fieldIndexes[i]];
+				else
+				{
+					_fields[i] = nullptr;
+					LOG(Warning) << "Index " << _fieldIndexes[i] << " exceeds number of passed fields (" << size << "), field dependence is ignored";
+				}
+			}
+		}
+
 		static bool dependsOnTime() CADET_NOEXCEPT { return true; }
 		static bool requiresWorkspace() CADET_NOEXCEPT { return true; }
 
 	protected:
 
 		std::vector<Field*> _fields; //!< Pointer to the field
-		std::vector<int> _fieldIndexes; //!< Index to the field
+		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter
 		std::vector<std::vector<int>> _dimensionMaps;
 
 		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
@@ -257,28 +274,33 @@ namespace model
 		 * @param [in] nParams Number of externally dependent parameters (also size of buffer)
 		 * @param [in] dimensions 
 		 */
-		inline void configure(IParameterProvider& paramProvider, unsigned int nParams, std::vector<std::string> dimensions)
+		inline void configure(IParameterProvider& paramProvider, std::vector<std::string> params, std::vector<std::string> dimensions)
 		{			
-			std::vector<int> idx;
-			if (paramProvider.exists("EXTFUN"))
-				idx = paramProvider.getIntArray("EXTFUN");
-
-			if (idx.size() >= nParams)
-				_extFunIndex = idx;
-			else
+			for (size_t i = 0; i < params.size(); ++i)
 			{
-				_extFunIndex.resize(nParams);
-				if (!idx.empty())
-				{
-					// Use one external function for all parameters
-					std::fill(_extFunIndex.begin(), _extFunIndex.end(), idx[0]);
-				}
+				std::vector<int> idx;
+				std::string param = params[i] + "_EXTFUN";
+				if (!paramProvider.exists(param))
+					idx = paramProvider.getIntArray(param);
+
+				if (idx.size() >= params.size())
+					_fieldIndexes[i] = idx;
 				else
 				{
-					// There is no external dependence configured
-					std::fill(_extFunIndex.begin(), _extFunIndex.end(), -1);
+					_fieldIndexes.resize(params.size());
+					if (!idx.empty())
+					{
+						// Use one external function for all components
+						std::fill(_fieldIndexes[i].begin(), _fieldIndexes[i].end(), idx[0]);
+					}
+					else
+					{
+						// There is no external dependence configured
+						std::fill(_fieldIndexes[i].begin(), _fieldIndexes[i].end(), -1);
+					}
 				}
 			}
+
 
 			for (unsigned int i = 0; i < _fields.size()) {
 				Field* field = _fields[i];
@@ -297,7 +319,7 @@ namespace model
 				std::vector<int> dimMap = _dimensionMaps[i];
 				if (field)
 				{
-					std::vector<double> mappedCoords = {};
+					auto mappedCoords = std::vector<double>();
 					for (unsigned int dimIdx = 0; dimIdx < coords.size(); ++dimIdx)
 					{
 						mappedCoords[dimIdx] = dimMap[dimIdx];

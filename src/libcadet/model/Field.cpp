@@ -57,7 +57,8 @@ bool Field::configure(IParameterProvider *paramProvider) {
 
 std::vector<int> Field::dimensionMap(std::vector<std::string> dims)
 {
-  auto res = std::vector<int>();
+  LOG(Debug) << "Field::dimensionMap " << dims;
+  std::vector<int> res;
   for (std::string dimName : dims)
   {
     if (auto dimIdx = _dimNamesMap.find(dimName); dimIdx != _dimNamesMap.end())
