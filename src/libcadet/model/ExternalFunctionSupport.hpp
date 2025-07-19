@@ -262,9 +262,9 @@ namespace model
 
 	protected:
 
-		std::vector<Field*> _fields; //!< Pointer to the field
-		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter
-		std::vector<std::vector<int>> _dimensionMaps;
+		std::vector<std::vector<Field*>> _fields; //!< Pointer to the field, by parameter/component
+		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter/component
+		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by parameter
 
 		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
 
