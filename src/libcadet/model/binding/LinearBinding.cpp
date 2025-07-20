@@ -707,7 +707,9 @@ public:
 
 	virtual void setFields(Field** fields, unsigned int size) { _paramHandler.setFields(fields, size); }
 
-	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { _paramHandler.setExternalFunctions(extFuns, size); }
+	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) {
+		// only imlemented for ExternalLinearBinding
+	}
 
 	// The next three flux() function implementations and two analyticJacobian() function
 	// implementations are usually hidden behind

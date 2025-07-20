@@ -262,7 +262,7 @@ namespace model
 
 	protected:
 
-		std::vector<std::vector<Field*>> _fields; //!< Pointer to the field, by parameter/component
+		std::vector<Field*> _fields; //!< Pointer to the field, by global index
 		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter/component
 		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by parameter
 
@@ -302,7 +302,7 @@ namespace model
 			}
 
 
-			for (unsigned int i = 0; i < _fields.size()) {
+			for (unsigned int i = 0; i < _fields.size(); ++i) {
 				Field* field = _fields[i];
 				if (field) {
 					_dimensionMaps[i] = field->dimensionMap(dimensions);
