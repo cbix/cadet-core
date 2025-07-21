@@ -244,15 +244,18 @@ namespace model
 		inline void setFields(Field** fields, int size)
 		{
 			_fields.clear();
-			_fields.resize(_fieldIndexes.size(), nullptr);
-			for (size_t i = 0; i < _fieldIndexes.size(); ++i)
+			_fields.resize(_fieldIndexes.size(), std::vector<Field*>());
+			for (size_t paramIdx = 0; paramIdx < _fieldIndexes.size(); ++paramIdx)
 			{
-				if (_fieldIndexes[i] >= 0 && _fieldIndexes[i] < size)
-					_fields[i] = fields[_fieldIndexes[i]];
-				else
+				for (size_t compIdx = 0; compIdx < _fieldIndexes[paramIdx].size(); ++compIdx)
 				{
-					_fields[i] = nullptr;
-					LOG(Warning) << "Index " << _fieldIndexes[i] << " exceeds number of passed fields (" << size << "), field dependence is ignored";
+					if (_fieldIndexes[paramIdx][compIdx] >= 0 && _fieldIndexes[paramIdx][compIdx] < size)
+						_fields[paramIdx][compIdx] = fields[_fieldIndexes[paramIdx][compIdx]];
+					else
+					{
+						_fields[paramIdx][compIdx] = nullptr;
+						LOG(Warning) << "Index " << _fieldIndexes[paramIdx][compIdx] << " exceeds number of passed fields (" << size << "), field dependence is ignored";
+					}
 				}
 			}
 		}
@@ -262,7 +265,7 @@ namespace model
 
 	protected:
 
-		std::vector<Field*> _fields; //!< Pointer to the field, by global index
+		std::vector<std::vector<Field*>> _fields; //!< Pointer to the field, by parameter/component
 		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter/component
 		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by parameter
 
