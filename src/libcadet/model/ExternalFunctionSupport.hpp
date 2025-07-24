@@ -221,42 +221,13 @@ namespace model
 	{
 	public:
 
-		inline void setFields(Field** fields, unsigned int size) { }
-
-		/*
-		inline void setExternalFunctions(IExternalFunction** extFuns, int size)
-		{
-			_extFun.clear();
-			_extFun.resize(_extFunIndex.size(), nullptr);
-			for (std::size_t i = 0; i < _extFunIndex.size(); ++i)
-			{
-				if ((_extFunIndex[i] >= 0) && (_extFunIndex[i] < size))
-					_extFun[i] = extFuns[_extFunIndex[i]];
-				else
-				{
-					_extFun[i] = nullptr;
-					LOG(Warning) << "Index " << _extFunIndex[i] << " exceeds number of passed external functions (" << size << "), external dependence is ignored";
-				}
-			}
-		}
-		*/
-
-		inline void setFields(Field** fields, int size)
+		inline void setFields(Field** fields, unsigned int size)
 		{
 			_fields.clear();
-			_fields.resize(_fieldIndexes.size(), std::vector<Field*>());
-			for (size_t paramIdx = 0; paramIdx < _fieldIndexes.size(); ++paramIdx)
+			_fields.resize(size, nullptr);
+			for (unsigned int i = 0; i < size; ++i)
 			{
-				for (size_t compIdx = 0; compIdx < _fieldIndexes[paramIdx].size(); ++compIdx)
-				{
-					if (_fieldIndexes[paramIdx][compIdx] >= 0 && _fieldIndexes[paramIdx][compIdx] < size)
-						_fields[paramIdx][compIdx] = fields[_fieldIndexes[paramIdx][compIdx]];
-					else
-					{
-						_fields[paramIdx][compIdx] = nullptr;
-						LOG(Warning) << "Index " << _fieldIndexes[paramIdx][compIdx] << " exceeds number of passed fields (" << size << "), field dependence is ignored";
-					}
-				}
+				_fields[i] = fields[i];
 			}
 		}
 
@@ -265,9 +236,9 @@ namespace model
 
 	protected:
 
-		std::vector<std::vector<Field*>> _fields; //!< Pointer to the field, by parameter/component
+		std::vector<Field*> _fields; //!< Pointer to the field, by global index 
 		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter/component
-		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by parameter
+		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by field index
 
 		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
 
@@ -313,16 +284,15 @@ namespace model
 			}
 		}
 
-		inline void evaluateField(std::vector<double> coords, unsigned int nParams, double* buffer) const
+		inline void evaluateField(std::vector<double> coords, unsigned int paramIdx, double* buffer) const
 		{
-
-			for (unsigned int i = 0; i < nParams; ++i)
+			for (unsigned int i = 0; i < _fields.size(); ++i)
 			{
 				Field* const field = _fields[i];
 				std::vector<int> dimMap = _dimensionMaps[i];
 				if (field)
 				{
-					auto mappedCoords = std::vector<double>();
+					std::vector<double> mappedCoords;
 					for (unsigned int dimIdx = 0; dimIdx < coords.size(); ++dimIdx)
 					{
 						mappedCoords[dimIdx] = dimMap[dimIdx];

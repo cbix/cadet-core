@@ -282,7 +282,8 @@ public:
 		BufferedArray<double> extFunBuffer = workSpace.array<double>(2);
 
 		// Evaluate external functions in buffer
-		evaluateExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extFunBuffer));
+		//evaluateExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extFunBuffer));
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle});
 
 		// Prepare the buffer for the data and update the data
 		_kA.prepareCache(localParams->kA, workSpace);
@@ -372,8 +373,8 @@ protected:
 	}
 
 	// Handlers provide configure(), reserve(), and registerParam() for parameters
-	FieldScalarParameter _kA; //!< Handler for adsorption rate
-	FieldScalarParameter _kD; //!< Handler for desorption rate
+	FieldScalarComponentDependentParameter _kA; //!< Handler for adsorption rate
+	FieldScalarComponentDependentParameter _kD; //!< Handler for desorption rate
 };
 
 
