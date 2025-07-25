@@ -233,7 +233,7 @@ public:
 		_kD.configure("LIN_KD", paramProvider, nComp, nBoundStates);
 		
 		// configure number of parameters and order in which coordinates are passed when evaluating field
-		FieldParamHandlerBase::configure(paramProvider, 2, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
+		FieldParamHandlerBase::configure(paramProvider, {"LIN_KA", "LIN_KD"}, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
 		return validateConfig(nComp, nBoundStates);
 	}
 
@@ -283,7 +283,7 @@ public:
 
 		// Evaluate external functions in buffer
 		//evaluateExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extFunBuffer));
-		evaluateField({t, colPos.axial, colPos.radial, colPos.particle});
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(extFunBuffer));
 
 		// Prepare the buffer for the data and update the data
 		_kA.prepareCache(localParams->kA, workSpace);

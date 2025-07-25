@@ -284,7 +284,7 @@ namespace model
 			}
 		}
 
-		inline void evaluateField(std::vector<double> coords, unsigned int paramIdx, double* buffer) const
+		inline void evaluateField(std::vector<double> coords, double* buffer) const
 		{
 			for (unsigned int i = 0; i < _fields.size(); ++i)
 			{
@@ -306,17 +306,9 @@ namespace model
 			}
 		}
 
-		/**
-		 * @brief Evaluates the time derivative of the external functions for the different parameters
-		 * @param [in] t Current time
-		 * @param [in] z Axial coordinate in the column
-		 * @param [in] r Radial coordinate in the bead
-		 * @param [in] secIdx Index of the current section
-		 * @param [in] nParams Number of externally dependent parameters (also size of buffer)
-		 * @param [out] buffer Buffer that holds time derivatives of each external function
-		 */
-		inline void evaluateTimeDerivativeExternalFunctions(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nParams, double* buffer) const
+		inline void evaluateTimeDerivativeField(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nParams, double* buffer) const
 		{
+			/*
 			for (unsigned int i = 0; i < nParams; ++i)
 			{
 				IExternalFunction* const fun = _extFun[i];
@@ -325,6 +317,7 @@ namespace model
 				else
 					buffer[i] = 0.0;
 			}
+			*/
 		}
 
 	};
