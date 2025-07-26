@@ -57,6 +57,8 @@ public:
 
   double interpolateValue(std::vector<double> coords);
 
+  double interpolateDerivative(std::vector<double> coords, size_t derivativeIdx);
+
   static const char *identifier() { return "LINEAR_INTERP_FIELD"; }
 
 private:

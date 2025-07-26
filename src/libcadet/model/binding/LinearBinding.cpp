@@ -317,9 +317,11 @@ public:
 		BufferedArray<double> extFunBuffer = workSpace.array<double>(2);
 		BufferedArray<double> extDerivBuffer = workSpace.array<double>(2);
 
-		// Evaluate external functions and their time derivatives
-		evaluateExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extFunBuffer));
-		evaluateTimeDerivativeExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extDerivBuffer));
+		// evaluate field
+		// TODO time derivative
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(extFunBuffer));
+		//evaluateExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extFunBuffer));
+		//evaluateTimeDerivativeExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extDerivBuffer));
 
 		// Prepare the buffer for the data and update the data
 		_kA.prepareCache(localParams->kA, workSpace);

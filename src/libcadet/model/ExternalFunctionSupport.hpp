@@ -239,6 +239,7 @@ namespace model
 		std::vector<Field*> _fields; //!< Pointer to the field, by global index 
 		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter/component
 		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by field index
+		std::vector<int> _timeDimIdx; //!< Index of the time dimension, by field index
 
 		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
 
@@ -275,11 +276,14 @@ namespace model
 				}
 			}
 
-
-			for (unsigned int i = 0; i < _fields.size(); ++i) {
+			_dimensionMaps.resize(_fields.size());
+			_timeDimIdx.resize(_fields.size());
+			for (unsigned int i = 0; i < _fields.size(); ++i)
+			{
 				Field* field = _fields[i];
 				if (field) {
 					_dimensionMaps[i] = field->dimensionMap(dimensions);
+					_timeDimIdx[i] = field->dimensionMap({ "TIME" })[0];
 				}
 			}
 		}
@@ -306,18 +310,27 @@ namespace model
 			}
 		}
 
-		inline void evaluateTimeDerivativeField(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nParams, double* buffer) const
+		inline void evaluateTimeDerivativeField(std::vector<double> coords, double* buffer) const
 		{
-			/*
-			for (unsigned int i = 0; i < nParams; ++i)
+			for (unsigned int i = 0; i < _fields.size(); ++i)
 			{
-				IExternalFunction* const fun = _extFun[i];
-				if (fun)
-					buffer[i] = fun->timeDerivative(t, colPos.axial, colPos.radial, colPos.particle, secIdx);
+				Field* const field = _fields[i];
+				std::vector<int> dimMap = _dimensionMaps[i];
+				int timeIdx = _timeDimIdx[i];
+				if (field && timeIdx >= 0)
+				{
+					std::vector<double> mappedCoords;
+					for (unsigned int dimIdx = 0; dimIdx < coords.size(); ++dimIdx)
+					{
+						mappedCoords[dimIdx] = dimMap[dimIdx];
+					}
+					buffer[i] = field->interpolateDerivative(mappedCoords, timeIdx);
+				}
 				else
+				{
 					buffer[i] = 0.0;
+				}
 			}
-			*/
 		}
 
 	};
