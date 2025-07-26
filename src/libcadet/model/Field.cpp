@@ -39,7 +39,10 @@ bool Field::configure(IParameterProvider *paramProvider) {
   LOG(Debug) << "Field::configure";
   LOG(Debug) << "field dims: " << _dimNames;
   size_t size = 1;
-  for (std::string dim : _dimNames) {
+  for (size_t idx = 0; idx < _dimNames.size(); idx++)
+  {
+    std::string dim = _dimNames[idx];
+    _dimNamesMap[dim] = idx;
     std::vector dimCoords = paramProvider->getDoubleArray("COORD_" + dim);
     size *= dimCoords.size();
     _shape.push_back(dimCoords.size());

@@ -318,10 +318,8 @@ public:
 		BufferedArray<double> extDerivBuffer = workSpace.array<double>(2);
 
 		// evaluate field
-		// TODO time derivative
 		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(extFunBuffer));
-		//evaluateExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extFunBuffer));
-		//evaluateTimeDerivativeExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extDerivBuffer));
+		evaluateTimeDerivativeField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(extDerivBuffer));
 
 		// Prepare the buffer for the data and update the data
 		_kA.prepareCache(localParams->kA, workSpace);
