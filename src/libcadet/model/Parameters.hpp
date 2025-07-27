@@ -1548,19 +1548,28 @@ public:
 	/**
 	 * @brief Underlying type
 	 */
-	typedef active storage_t;
+	typedef std::vector<active> storage_t;
 
-	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates) { }
+	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_fieldIdx.resize(nComp, -1);
+		std::string param = varName + "_EXTFUN";
+		if (paramProvider.exists(param))
+		{
+			_fieldIdx = paramProvider.getIntArray(param);
+		}
+	}
 
 	inline void registerParam(const std::string& varName, std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates) { }
 
 	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) { }
 
-	inline void reserve(unsigned int nReactions, unsigned int nComp, unsigned int nBoundStates) { }
+	inline void reserve(unsigned int nReactions, unsigned int nComp, unsigned int nBoundStates) {
 
-	inline void update(active& result, double extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	}
+
+	inline void update(std::vector<active>& result, double extVal, unsigned int nComp, unsigned int const* nBoundStates) const
 	{
-		update(&result, extVal, nComp, nBoundStates);
 	}
 
 	/**
@@ -1572,7 +1581,8 @@ public:
 	 */
 	inline void update(active* result, double extVal, unsigned int nComp, unsigned int const* nBoundStates) const
 	{
-		*result = extVal;
+		for (size_t i = 0; i < _usesField
+		update(&result, extVal, nComp, nBoundStates);
 	}
 
 	/**
@@ -1604,14 +1614,27 @@ public:
 	//inline storage_t& base() CADET_NOEXCEPT { return 0; }
 	//inline const storage_t& base() const CADET_NOEXCEPT { return 0; }
 
-	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT { return 0; }
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT
+	{
+		return nComp * sizeof(active) + alignof(active);
+	}
 
-	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int nBoundStates) const CADET_NOEXCEPT { return 0; }
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int nBoundStates) const CADET_NOEXCEPT
+	{
+		return nComp * sizeof(active) + alignof(active);
+	}
 
 	template <typename T>
-	inline void prepareCache(T& cache, LinearBufferAllocator& buffer) const { }
+	inline void prepareCache(T& cache, LinearBufferAllocator& buffer) const
+	{
+		cache.fromTemplate(buffer, _usesField);
+	}
 
 	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
+
+protected:
+	std::vector<int> _fieldIdx;
+
 };
 
 

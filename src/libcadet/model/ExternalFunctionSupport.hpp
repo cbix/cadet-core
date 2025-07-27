@@ -258,6 +258,7 @@ namespace model
 				if (!paramProvider.exists(param))
 					idx = paramProvider.getIntArray(param);
 
+				// FIXME _fieldIndexes is [param][comp]
 				if (idx.size() >= params.size())
 					_fieldIndexes[i] = idx;
 				else
