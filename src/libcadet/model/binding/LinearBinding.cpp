@@ -277,20 +277,20 @@ public:
 	 */
 	inline ParamsHandle update(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
 	{
+		LOG(Debug) << "LinearParamHandler update fields size " << _fields.size();
 		// Allocate params_t and buffer for function evaluation
 		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
-		BufferedArray<double> extFunBuffer = workSpace.array<double>(2);
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
 
 		// Evaluate external functions in buffer
-		//evaluateExternalFunctions(t, secIdx, colPos, 2, static_cast<double*>(extFunBuffer));
-		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(extFunBuffer));
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
 
 		// Prepare the buffer for the data and update the data
 		_kA.prepareCache(localParams->kA, workSpace);
-		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), extFunBuffer[0], nComp, nBoundStates);
+		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), &fieldBuffer[0], nComp, nBoundStates);
 
 		_kD.prepareCache(localParams->kD, workSpace);
-		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), extFunBuffer[1], nComp, nBoundStates);
+		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), &fieldBuffer[0], nComp, nBoundStates);
 
 		return localParams;
 	}
@@ -314,27 +314,27 @@ public:
 		BufferedScalar<params_t> p = workSpace.scalar<params_t>();
 
 		// Allocate buffer for external function values and their time derivatives
-		BufferedArray<double> extFunBuffer = workSpace.array<double>(2);
-		BufferedArray<double> extDerivBuffer = workSpace.array<double>(2);
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+		BufferedArray<double> fieldDerivBuffer = workSpace.array<double>(_fields.size());
 
 		// evaluate field
-		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(extFunBuffer));
-		evaluateTimeDerivativeField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(extDerivBuffer));
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+		evaluateTimeDerivativeField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldDerivBuffer));
 
 		// Prepare the buffer for the data and update the data
 		_kA.prepareCache(localParams->kA, workSpace);
-		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), extFunBuffer[0], nComp, nBoundStates);
+		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), &fieldBuffer[0], nComp, nBoundStates);
 
 		_kA.prepareCache(p->kA, workSpace);
-		_kA.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kA), extFunBuffer[0], extDerivBuffer[0], nComp, nBoundStates);
+		_kA.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kA), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
 
 		_kD.prepareCache(localParams->kD, workSpace);
-		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), extFunBuffer[1], nComp, nBoundStates);
+		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), &fieldBuffer[0], nComp, nBoundStates);
 
 		_kD.prepareCache(p->kD, workSpace);
-		_kD.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kD), extFunBuffer[1], extDerivBuffer[1], nComp, nBoundStates);
+		_kD.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kD), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
 
-		return std::make_tuple<ParamsHandle, ParamsHandle>(std::move(localParams), std::move(p));;
+		return std::make_tuple<ParamsHandle, ParamsHandle>(std::move(localParams), std::move(p));
 	}
 
 	/**
@@ -706,7 +706,10 @@ public:
 		return _paramHandler.cacheSize(nComp, totalNumBoundStates, nBoundStates);
 	}
 
-	virtual void setFields(Field** fields, unsigned int size) { _paramHandler.setFields(fields, size); }
+	virtual void setFields(Field** fields, unsigned int size) {
+		LOG(Debug) << "setFields(" << size << ")";
+		_paramHandler.setFields(fields, size);
+	}
 
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) {
 		// only imlemented for ExternalLinearBinding

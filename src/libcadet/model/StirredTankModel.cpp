@@ -259,6 +259,25 @@ bool CSTRModel::configureModelDiscretization(IParameterProvider& paramProvider, 
 	return bindingConfSuccess && reactionConfSuccess;
 }
 
+void CSTRModel::setExternalFunctions(IExternalFunction **extFuns, unsigned int size)
+{
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setExternalFunctions(extFuns, size);
+	}
+}
+
+void CSTRModel::setFields(Field **fields, unsigned int size)
+{
+	LOG(Debug) << "CSTRModel::setFields, size = " << size;
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setFields(fields, size);
+	}
+}
+
 bool CSTRModel::configure(IParameterProvider& paramProvider)
 {
 	_curFlowRateFilter = 0.0;

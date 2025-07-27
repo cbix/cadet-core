@@ -130,6 +130,7 @@ void ModelSystem::addModel(IModel* unitOp)
 		_inOutModels.push_back(_models.size() - 1);
 
 	// Propagate fields to submodel
+	LOG(Debug) << "Setting fields size " << _fields.size();
 	uo->setFields(_fields.data(), _fields.size());
 
 	// Propagate external functions to submodel
@@ -274,6 +275,56 @@ void ModelSystem::removeExternalFunction(IExternalFunction const* extFun)
 	for (IUnitOperation* m : _models)
 		m->setExternalFunctions(_extFunctions.data(), _extFunctions.size());
 }
+
+/*
+unsigned int ModelSystem::addField(Field& field)
+{
+	_fields.push_back(&field);
+
+	// Propagate external functions to submodels
+	for (IUnitOperation* m : _models)
+		m->setFields(_fields.data(), _fields.size());
+
+	return _fields.size() - 1;
+}
+
+Field* ModelSystem::getField(unsigned int index)
+{
+	if (index < _fields.size())
+		return _fields[index];
+	else
+		return nullptr;
+}
+
+Field const* ModelSystem::getField(unsigned int index) const
+{
+	if (index < _fields.size())
+		return _fields[index];
+	else
+		return nullptr;
+}
+
+unsigned int ModelSystem::numFields() const CADET_NOEXCEPT
+{
+	return _fields.size();
+}
+
+void ModelSystem::removeField(Field const* field)
+{
+	for (std::vector<Field*>::iterator it = _fields.begin(); it != _fields.end(); ++it)
+	{
+		if (*it == field)
+		{
+			_fields.erase(it);
+			break;
+		}
+	}
+
+	// Update external functions in submodels
+	for (IUnitOperation* m : _models)
+		m->setFields(_fields.data(), _fields.size());
+}
+*/
 
 unsigned int ModelSystem::numDofs() const CADET_NOEXCEPT
 {
@@ -491,11 +542,15 @@ bool ModelSystem::configureModelDiscretization(IParameterProvider& paramProvider
 
 			if (extType == std::string("LINEAR_INTERP_FIELD"))
 			{
+				_extFunctions.push_back(nullptr);
 				Field *const field = new Field();
 				const bool confSuccess = field->configure(&paramProvider);
 
 				if (confSuccess)
+				{
+					LOG(Debug) << "Successfully configured field " << i;
 					_fields.push_back(field);
+				}
 				else
 				{
 					_fields.push_back(nullptr);
@@ -507,6 +562,7 @@ bool ModelSystem::configureModelDiscretization(IParameterProvider& paramProvider
 			}
 			else
 			{
+				_fields.push_back(nullptr);
 				IExternalFunction* const func = helper.createExternalFunction(extType);
 				if (func)
 				{
@@ -547,7 +603,10 @@ bool ModelSystem::configureModelDiscretization(IParameterProvider& paramProvider
 
 	// Propagate external functions to submodels
 	for (IUnitOperation* m : _models)
+	{
 		m->setExternalFunctions(_extFunctions.data(), _extFunctions.size());
+		m->setFields(_fields.data(), _fields.size());
+	}
 
 	// Read solver settings
 	paramProvider.pushScope("solver");
@@ -620,16 +679,19 @@ bool ModelSystem::configure(IParameterProvider& paramProvider)
 		for (std::size_t i = 0; i < _extFunctions.size(); ++i)
 		{
 			IExternalFunction* const func = _extFunctions[i];
-			if (!func)
+			Field* const field = _fields[i];
+
+			if (!func && !field)
 				continue;
 
 			oss.str("");
 			oss << "source_" << std::setfill('0') << std::setw(3) << std::setprecision(0) << i;
+
 			if (!paramProvider.exists(oss.str()))
 				continue;
 
 			paramProvider.pushScope(oss.str());
-			const bool localSuccess = func->configure(&paramProvider);
+			const bool localSuccess = func ? func->configure(&paramProvider) : field->configure(&paramProvider);
 			paramProvider.popScope();
 
 			if (!localSuccess)
@@ -1412,7 +1474,10 @@ void ModelSystem::setSectionTimes(double const* secTimes, bool const* secContinu
 		m->setSectionTimes(secTimes, secContinuity, nSections);	
 
 	for (IExternalFunction* extFun : _extFunctions)
-		extFun->setSectionTimes(secTimes, secContinuity, nSections);
+	{
+		if (extFun != nullptr)
+			extFun->setSectionTimes(secTimes, secContinuity, nSections);
+	}
 }
 
 /**
