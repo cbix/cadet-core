@@ -36,6 +36,8 @@ bool Field::configure(IParameterProvider *paramProvider) {
     return false;
 
   _dimNames = paramProvider->getStringArray("DIMENSIONS");
+  _shape.clear();
+  _dimensions.clear();
   LOG(Debug) << "Field::configure";
   LOG(Debug) << "field dims: " << _dimNames;
   size_t size = 1;
@@ -49,6 +51,8 @@ bool Field::configure(IParameterProvider *paramProvider) {
     _dimensions.push_back(dimCoords);
     LOG(Debug) << "field dim " << dim << " size=" << dimCoords.size() << ", coords=" << dimCoords;
   }
+  LOG(Debug) << "shape = " << _shape;
+  LOG(Debug) << "dimensions = " << _dimensions;
   _data = paramProvider->getDoubleArray("DATA");
   if (_data.size() != size) {
     throw std::domain_error("DATA is " + std::to_string(_data.size()) + ", expected " + std::to_string(size));
@@ -56,6 +60,14 @@ bool Field::configure(IParameterProvider *paramProvider) {
   // TODO get other parameters
 
   return true;
+}
+
+int Field::dimensionIndex(std::string dim)
+{
+  auto dimIdx = _dimNamesMap.find(dim);
+  if (dimIdx == _dimNamesMap.end())
+    return -1;
+  return dimIdx->second;
 }
 
 std::vector<int> Field::dimensionMap(std::vector<std::string> dims)

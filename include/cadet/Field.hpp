@@ -37,7 +37,7 @@ class IParameterProvider;
  */
 class CADET_API Field {
 public:
-  Field() {}
+  Field() : _shape(), _dimensions(), _dimNamesMap() {}
   ~Field() CADET_NOEXCEPT {}
 
   /**
@@ -51,6 +51,8 @@ public:
    */
   bool configure(IParameterProvider *paramProvider);
 
+  int dimensionIndex(std::string dim);
+
   std::vector<int> dimensionMap(std::vector<std::string> dims);
 
   double valueAtIndex(std::vector<size_t> idx);
@@ -62,7 +64,6 @@ public:
   static const char *identifier() { return "LINEAR_INTERP_FIELD"; }
 
 private:
-  std::vector<double> _time;
   std::vector<size_t> _shape;
   //std::vector<std::pair<std::string, std::vector<double>>> _dimensions;
   std::vector<std::vector<double>> _dimensions;

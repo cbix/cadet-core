@@ -238,7 +238,7 @@ namespace model
 				Field* field = _fields[i];
 				if (field) {
 					_dimensionMaps[i] = field->dimensionMap(_dimensions);
-					_timeDimIdx[i] = field->dimensionMap({ "TIME" })[0];
+					_timeDimIdx[i] = field->dimensionIndex("TIME");
 				}
 			}
 		}
@@ -305,12 +305,12 @@ namespace model
 				std::vector<int> dimMap = _dimensionMaps[i];
 				if (field)
 				{
-					std::vector<double> mappedCoords(coords.size(), 0.0);
-					for (unsigned int dimIdx = 0; dimIdx < coords.size(); ++dimIdx)
+					std::vector<double> mappedCoords(dimMap.size(), 0.0);
+					for (unsigned int dimIdx = 0; dimIdx < dimMap.size(); ++dimIdx)
 					{
 						int mappedDimIdx = dimMap[dimIdx];
 						if (mappedDimIdx >= 0)
-							mappedCoords[mappedDimIdx] = coords[dimIdx];
+							mappedCoords[dimIdx] = coords[mappedDimIdx];
 					}
 					buffer[i] = field->interpolateValue(mappedCoords);
 				}
@@ -330,12 +330,12 @@ namespace model
 				int timeIdx = _timeDimIdx[i];
 				if (field && timeIdx >= 0)
 				{
-					std::vector<double> mappedCoords(coords.size(), 0.0);
-					for (unsigned int dimIdx = 0; dimIdx < coords.size(); ++dimIdx)
+					std::vector<double> mappedCoords(dimMap.size(), 0.0);
+					for (unsigned int dimIdx = 0; dimIdx < dimMap.size(); ++dimIdx)
 					{
 						int mappedDimIdx = dimMap[dimIdx];
 						if (mappedDimIdx >= 0)
-							mappedCoords[mappedDimIdx] = coords[dimIdx];
+							mappedCoords[dimIdx] = coords[mappedDimIdx];
 					}
 					buffer[i] = field->interpolateDerivative(mappedCoords, timeIdx);
 				}

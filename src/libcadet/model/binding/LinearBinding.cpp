@@ -277,7 +277,9 @@ public:
 	 */
 	inline ParamsHandle update(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
 	{
-		LOG(Debug) << "LinearParamHandler update fields size " << _fields.size();
+		LOG(Debug) << "LinearParamHandler update(" << t << ", " << secIdx << ", "
+			<< colPos.axial << "/" << colPos.radial << "/" << colPos.particle << ", "
+			<< nComp << ", ...)";
 		// Allocate params_t and buffer for function evaluation
 		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
 		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
