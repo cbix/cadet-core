@@ -230,6 +230,17 @@ namespace model
 			{
 				_fields[i] = fields[i];
 			}
+
+			_dimensionMaps.resize(_fields.size());
+			_timeDimIdx.resize(_fields.size());
+			for (unsigned int i = 0; i < _fields.size(); ++i)
+			{
+				Field* field = _fields[i];
+				if (field) {
+					_dimensionMaps[i] = field->dimensionMap(_dimensions);
+					_timeDimIdx[i] = field->dimensionMap({ "TIME" })[0];
+				}
+			}
 		}
 
 		static bool dependsOnTime() CADET_NOEXCEPT { return true; }
@@ -237,6 +248,8 @@ namespace model
 
 	protected:
 
+		std::vector<std::string> _params;
+		std::vector<std::string> _dimensions;
 		std::vector<Field*> _fields; //!< Pointer to the field, by global index 
 		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter/component
 		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by field index
@@ -252,6 +265,9 @@ namespace model
 		 */
 		inline void configure(IParameterProvider& paramProvider, std::vector<std::string> params, std::vector<std::string> dimensions)
 		{			
+			LOG(Debug) << "FieldParamHandlerBase::configure(" << params << ", " << dimensions << ")";
+			_params = params;
+			_dimensions = dimensions;
 			for (size_t i = 0; i < params.size(); ++i)
 			{
 				std::vector<int> idx;
@@ -277,23 +293,14 @@ namespace model
 					}
 				}
 			}
-
-			_dimensionMaps.resize(_fields.size());
-			_timeDimIdx.resize(_fields.size());
-			for (unsigned int i = 0; i < _fields.size(); ++i)
-			{
-				Field* field = _fields[i];
-				if (field) {
-					_dimensionMaps[i] = field->dimensionMap(dimensions);
-					_timeDimIdx[i] = field->dimensionMap({ "TIME" })[0];
-				}
-			}
 		}
 
 		inline void evaluateField(std::vector<double> coords, double* buffer) const
 		{
+			LOG(Debug) << "FieldParamHandlerBase::evaluateField for " << _fields.size() << " fields, coords = " << coords << ", " << _dimensionMaps.size() << " dimension maps";
 			for (unsigned int i = 0; i < _fields.size(); ++i)
 			{
+				LOG(Debug) << "FieldParamHandlerBase::evaluateField i = " << i;
 				Field* const field = _fields[i];
 				std::vector<int> dimMap = _dimensionMaps[i];
 				if (field)
