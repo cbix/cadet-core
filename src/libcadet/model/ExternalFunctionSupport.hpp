@@ -242,7 +242,7 @@ namespace model
 		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by field index
 		std::vector<int> _timeDimIdx; //!< Index of the time dimension, by field index
 
-		FieldParamHandlerBase() : _fields(), _fieldIndexes() { }
+		FieldParamHandlerBase() : _fields(), _fieldIndexes(), _dimensionMaps(), _timeDimIdx() { }
 
 		/**
 		 * @brief Configures the external data source of this externally dependent parameter set
