@@ -61,13 +61,11 @@ bool Field::configure(IParameterProvider *paramProvider) {
 std::vector<int> Field::dimensionMap(std::vector<std::string> dims)
 {
   LOG(Debug) << "Field::dimensionMap " << dims;
-  std::vector<int> res;
-  for (std::string dimName : dims)
+  std::vector<int> res(_dimNames.size(), -1);
+  for (size_t i = 0; i < dims.size(); i++)
   {
-    if (auto dimIdx = _dimNamesMap.find(dimName); dimIdx != _dimNamesMap.end())
-      res.push_back(dimIdx->second);
-    else
-      res.push_back(-1);
+    if (auto dimIdx = _dimNamesMap.find(dims[i]); dimIdx != _dimNamesMap.end())
+      res[dimIdx->second] = i;
   }
   return res;
 }
