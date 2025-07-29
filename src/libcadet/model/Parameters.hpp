@@ -1561,7 +1561,15 @@ public:
 			// TODO handle edge cases as in FieldParamHandlerBase
 		}
 		_fieldIdx.resize(nComp, -1);
-		_tpl.resize(nComp, 0.0);
+
+		// read constant values
+		if (paramProvider.exists(varName))
+		{
+			readParameterMatrix(_constValues, paramProvider, varName, nComp, 1);
+			if (_constValues.size() > 0)
+				_constValues.resize(nComp, _constValues[0]);
+		}
+		_constValues.resize(nComp, 0.0);
 	}
 
 	inline void registerParam(const std::string& varName, std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates) { }
@@ -1584,6 +1592,8 @@ public:
 			int f = _fieldIdx[i];
 			if (f >= 0)
 				result[i] = extVal[f];
+			else
+				result[i] = _constValues[i];
 		}
 	}
 
@@ -1634,14 +1644,14 @@ public:
 	template <typename T>
 	inline void prepareCache(T& cache, LinearBufferAllocator& buffer) const
 	{
-		cache.fromTemplate(buffer, _tpl);
+		cache.fromTemplate(buffer, _constValues);
 	}
 
 	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
 
 protected:
 	std::vector<int> _fieldIdx;
-	std::vector<active> _tpl;
+	std::vector<active> _constValues;
 
 };
 
