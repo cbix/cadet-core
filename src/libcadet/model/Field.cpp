@@ -28,6 +28,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <iomanip>
 
 namespace cadet {
 
@@ -38,8 +39,7 @@ bool Field::configure(IParameterProvider *paramProvider) {
   _dimNames = paramProvider->getStringArray("DIMENSIONS");
   _shape.clear();
   _dimensions.clear();
-  LOG(Debug) << "Field::configure";
-  LOG(Debug) << "field dims: " << _dimNames;
+  LOG(Trace) << "field dims: " << _dimNames;
   size_t size = 1;
   for (size_t idx = 0; idx < _dimNames.size(); idx++)
   {
@@ -49,10 +49,10 @@ bool Field::configure(IParameterProvider *paramProvider) {
     size *= dimCoords.size();
     _shape.push_back(dimCoords.size());
     _dimensions.push_back(dimCoords);
-    LOG(Debug) << "field dim " << dim << " size=" << dimCoords.size() << ", coords=" << dimCoords;
+    LOG(Trace) << "field dim " << dim << " size=" << dimCoords.size() << ", coords=" << dimCoords;
   }
-  LOG(Debug) << "shape = " << _shape;
-  LOG(Debug) << "dimensions = " << _dimensions;
+  LOG(Trace) << "shape = " << _shape;
+  LOG(Trace) << "dimensions = " << _dimensions;
   _data = paramProvider->getDoubleArray("DATA");
   if (_data.size() != size) {
     throw std::domain_error("DATA is " + std::to_string(_data.size()) + ", expected " + std::to_string(size));
@@ -72,7 +72,7 @@ int Field::dimensionIndex(std::string dim)
 
 std::vector<int> Field::dimensionMap(std::vector<std::string> dims)
 {
-  LOG(Debug) << "Field::dimensionMap " << dims;
+  LOG(Trace) << "dims = " << dims;
   std::vector<int> res(_dimNames.size(), -1);
   for (size_t i = 0; i < dims.size(); i++)
   {
@@ -83,7 +83,7 @@ std::vector<int> Field::dimensionMap(std::vector<std::string> dims)
 }
 
 double Field::valueAtIndex(std::vector<size_t> idx) {
-  LOG(Debug) << "valueAtIndex" << idx;
+  LOG(Trace) << "valueAtIndex" << idx;
   size_t n = _dimensions.size();
   if (idx.size() != n || n == 0) {
     throw std::domain_error("Number of dimensions doesn't match or is zero");
@@ -103,14 +103,16 @@ double Field::valueAtIndex(std::vector<size_t> idx) {
 }
 
 double Field::interpolateValue(std::vector<double> coords) {
-  LOG(Debug) << "Field::interpolateValue " << coords;
+  LOG(Trace) << std::setprecision(40) << "coords = " << coords;
+  LOG(Trace) << "shape = " << _shape;
+  LOG(Trace) << "dimensions = " << _dimensions;
   size_t n = _shape.size();
   if (coords.size() != n) {
     throw std::domain_error("Number of dimensions doesn't match");
   }
   for (size_t i = 0; i < n; i++) {
-    double coord = coords.at(i);
-    std::vector<double> dim = _dimensions.at(i);
+    double coord = coords[i];
+    std::vector<double> dim = _dimensions[i];
     if (coord < dim.front() || coord > dim.back()) {
       throw std::range_error("Coordinate out of bounds");
     }
@@ -122,15 +124,15 @@ double Field::interpolateValue(std::vector<double> coords) {
   } field_interp_bounds_t;
   std::vector<field_interp_bounds_t> bounds;
   for (size_t i = 0; i < n; i++) {
-    double coord = coords.at(i);
-    std::vector<double> dim = _dimensions.at(i);
+    double coord = coords[i];
+    std::vector<double> dim = _dimensions[i];
     // find bounds for coordinate
     auto lower = std::upper_bound(dim.begin(), dim.end(), coord) - 1;
     size_t l = lower - dim.begin();
     size_t r = l + 1 >= dim.size() ? l : l + 1;
 
-    double coord_l = dim.at(l);
-    double coord_r = dim.at(r);
+    double coord_l = dim[l];
+    double coord_r = dim[r];
     double weight = 0.0;
     if (coord_r - coord_l > 0) {
       weight = (coord - coord_l) / (coord_r - coord_l);
@@ -164,14 +166,14 @@ double Field::interpolateValue(std::vector<double> coords) {
   for (field_bound_sample_t s : boundSamples) {
     result += valueAtIndex(s.idx) * s.weight;
   }
-  LOG(Debug) << "field interpolation result = " << result;
+  LOG(Trace) << "field interpolation result = " << result;
   return result;
 }
 
 double Field::interpolateDerivative(std::vector<double> coords, size_t derivativeIdx)
 {
   // TODO
-  LOG(Debug) << "Field::interpolateDerivative " << coords;
+  LOG(Trace) << "interpolateDerivative " << coords;
   size_t n = _shape.size();
   if (coords.size() != n) {
     throw std::domain_error("Number of dimensions doesn't match");
@@ -260,7 +262,7 @@ double Field::interpolateDerivative(std::vector<double> coords, size_t derivativ
     result += valueAtIndex(s.idx) * s.weight;
   }
   result /= part_r - part_l;
-  LOG(Debug) << "field interpolation derivative result = " << result;
+  LOG(Trace) << "field interpolation derivative result = " << result;
   return result;
 }
 
