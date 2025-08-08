@@ -189,6 +189,48 @@ protected:
 		}
 	}	
 };
+/*
+	"name": "MultiComponentLDFFreundlichParamHandler",
+	"externalName": "ExtMultiComponentLDFFreundlichParamHandler",
+	"parameters":
+		[
+			{ "type": "ScalarComponentDependentParameter", "varName": "kLDF", "confName": "MCLDFFRL_KLDF"},
+			{ "type": "ScalarComponentDependentParameter", "varName": "kF", "confName": "MCLDFFRL_KF"},
+			{ "type": "ScalarComponentDependentParameter", "varName": "n", "confName": "MCLDFFRL_EXP"},
+			{ "type": "ComponentDependentComponentVectorParameter", "varName": "a", "confName": "MCLDFFRL_A"}
+		],
+	"constantParameters":
+		[
+			{ "type": "ScalarParameter", "varName": "tau", "confName": "MCLDFFRL_TAU"}
+		]
+*/
+
+class FieldMultiComponentLDFFreundlichParamHandler : public FieldParamHandlerBase
+{
+public:
+	struct ConstParams
+	{
+		typename ScalarParameter::storage_t tau;
+		typename ComponentDependentComponentVectorParameter::storage_t a;
+	};
+
+	struct VariableParams
+	{
+		util::LocalVector<active> kLDF;
+		util::LocalVector<active> kF;
+		util::LocalVector<active> n;
+	};
+
+	typedef VariableParams params_t;
+	typedef ConstBufferedScalar<params_t> ParamsHandle;
+
+	static const char* identifier() { return "FIELD_MULTI_COMPONENT_LDF_FREUNDLICH"; }
+inline const char* ExtMultiComponentLDFFreundlichParamHandler::identifier() CADET_NOEXCEPT { return "EXT_MULTI_COMPONENT_LDF_FREUNDLICH"; }
+
+	FieldMultiComponentLDFFreundlichParamHandler() CADET_NOEXCEPT : _tau(&_constParams.tau), _a(&_constParams.a)
+	{ }
+
+}
 
 typedef MultiComponentLDFFreundlichBindingBase<MultiComponentLDFFreundlichParamHandler> MultiComponentLDFFreundlichBinding;
 typedef MultiComponentLDFFreundlichBindingBase<ExtMultiComponentLDFFreundlichParamHandler> ExternalMultiComponentLDFFreundlichBinding;
