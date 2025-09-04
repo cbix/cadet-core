@@ -189,21 +189,6 @@ protected:
 		}
 	}	
 };
-/*
-	"name": "MultiComponentLDFFreundlichParamHandler",
-	"externalName": "ExtMultiComponentLDFFreundlichParamHandler",
-	"parameters":
-		[
-			{ "type": "ScalarComponentDependentParameter", "varName": "kLDF", "confName": "MCLDFFRL_KLDF"},
-			{ "type": "ScalarComponentDependentParameter", "varName": "kF", "confName": "MCLDFFRL_KF"},
-			{ "type": "ScalarComponentDependentParameter", "varName": "n", "confName": "MCLDFFRL_EXP"},
-			{ "type": "ComponentDependentComponentVectorParameter", "varName": "a", "confName": "MCLDFFRL_A"}
-		],
-	"constantParameters":
-		[
-			{ "type": "ScalarParameter", "varName": "tau", "confName": "MCLDFFRL_TAU"}
-		]
-*/
 
 class FieldMultiComponentLDFFreundlichParamHandler : public FieldParamHandlerBase
 {
@@ -219,13 +204,14 @@ public:
 		util::LocalVector<active> kLDF;
 		util::LocalVector<active> kF;
 		util::LocalVector<active> n;
+		ComponentDependentComponentVectorParameter::storage_t a;
+		ScalarParameter::storage_t tau;
 	};
 
 	typedef VariableParams params_t;
 	typedef ConstBufferedScalar<params_t> ParamsHandle;
 
 	static const char* identifier() { return "FIELD_MULTI_COMPONENT_LDF_FREUNDLICH"; }
-	inline const char* ExtMultiComponentLDFFreundlichParamHandler::identifier() CADET_NOEXCEPT { return "EXT_MULTI_COMPONENT_LDF_FREUNDLICH"; }
 
 	FieldMultiComponentLDFFreundlichParamHandler() CADET_NOEXCEPT : _tau(&_constParams.tau), _a(&_constParams.a)
 	{ }
@@ -235,8 +221,10 @@ public:
 		_kLDF.configure("MCLDFFRL_KLDF", paramProvider, nComp, nBoundStates);
 		_kF.configure("MCLDFFRL_KF", paramProvider, nComp, nBoundStates);
 		_n.configure("MCLDFFRL_EXP", paramProvider, nComp, nBoundStates);
+		_a.configure("MCLDFFRL_A", paramProvider, nComp, nBoundStates);
+		_tau.configure("MCLDFFRL_TAU", paramProvider, nComp, nBoundStates);
 
-		FieldMultiComponentLDFFreundlichParamHandler::configure(paramProvider, {"MCLDFFRL_KLDF", "MCLDFFRL_KF", "MCLDFFRL_EXP"}, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
+		FieldParamHandlerBase::configure(paramProvider, {"MCLDFFRL_KLDF", "MCLDFFRL_KF", "MCLDFFRL_EXP"}, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
 
 		return validateConfig(nComp, nBoundStates);
 	}
@@ -246,6 +234,8 @@ public:
 		_kLDF.registerParam("MCLDFFRL_KLDF", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
 		_kF.registerParam("MCLDFFRL_KF", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
 		_n.registerParam("MCLDFFRL_EXP", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_a.registerParam("MCLDFFRL_A", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_tau.registerParam("MCLDFFRL_TAU", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
 	}
 
 	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) \
@@ -264,6 +254,9 @@ public:
 		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
 
 		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+
+		localParams->a = _constParams.a;
+		localParams->tau = _constParams.tau;
 
 		_kLDF.prepareCache(localParams->kLDF, workSpace);
 		_kLDF.update(cadet::util::dataOfLocalVersion(localParams->kLDF), &fieldBuffer[0], nComp, nBoundStates);
@@ -320,6 +313,8 @@ protected:
 	FieldScalarComponentDependentParameter _kF;
 	FieldScalarComponentDependentParameter _n;
 
+	ComponentDependentComponentVectorParameter _a;
+	ScalarParameter _tau;
 }
 
 typedef MultiComponentLDFFreundlichBindingBase<MultiComponentLDFFreundlichParamHandler> MultiComponentLDFFreundlichBinding;
