@@ -625,10 +625,10 @@ void CSTRModel::readInitialCondition(IParameterProvider& paramProvider)
 	
 	ad::copyToAd(initC.data(), _initConditions.data(), _nComp);
 
-	if (paramProvider.exists("INIT_Q"))
+	if (paramProvider.exists("INIT_CS"))
 	{
-		const std::vector<double> initQ = paramProvider.getDoubleArray("INIT_Q");
-		ad::copyToAd(initQ.data(), _initConditions.data() + _nComp, _totalBound);
+		const std::vector<double> initCs = paramProvider.getDoubleArray("INIT_CS");
+		ad::copyToAd(initCs.data(), _initConditions.data() + _nComp, _totalBound);
 	}
 	else
 		ad::fillAd(_initConditions.data() + _nComp, _totalBound, 0.0);
@@ -1516,6 +1516,7 @@ int CSTRModel::residualImpl(double t, unsigned int secIdx, StateType const* cons
 				// dRes / dC and dRes / dQ
 				BufferedArray<double> fluxJacobianMem = subAlloc.array<double>((_strideBound[type] + _nComp) * (_strideBound[type] + _nComp));
 				linalg::DenseMatrixView jacFlux(static_cast<double*>(fluxJacobianMem), nullptr, _strideBound[type] + _nComp, _strideBound[type] + _nComp);
+				jacFlux.setAll(0.0);
 				dynReaction->analyticJacobianCombinedAdd(t, secIdx, colPos, reinterpret_cast<double const*>(c), reinterpret_cast<double const*>(c + _nComp + _offsetParType[type]),
 					-1.0, jacFlux.row(0), jacFlux.row(_nComp), subAlloc);
 
@@ -1541,6 +1542,9 @@ int CSTRModel::residualImpl(double t, unsigned int secIdx, StateType const* cons
 						}
 					}
 				}
+				// Add volume part
+				for (unsigned int comp = 0; comp < _nComp; ++comp)
+					_jac.data()[(comp + 1) * (_nComp + _totalBound) + comp] += static_cast<double>(fluxLiquid[comp]);
 			}
 		}
 	}
