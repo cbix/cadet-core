@@ -221,6 +221,11 @@ namespace model
 	{
 	public:
 
+		inline void setExternalFunctions(IExternalFunction** extFuns, int size)
+		{
+			// only implemented for ExternalParamHandlerBase
+		}
+
 		inline void setFields(Field** fields, unsigned int size)
 		{
 			LOG(Debug) << "FieldParamHandlerBase::setFields, size = " << size;
