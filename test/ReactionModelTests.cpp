@@ -167,7 +167,6 @@ namespace reaction
 
 		return 0;
 	}
-
 	void extendModelWithDynamicReactions(cadet::JsonParameterProvider& jpp, UnitOpIdx unit, bool bulk, bool particle, bool particleModifiers)
 	{
 		auto gs = util::makeModelGroupScope(jpp, unit);
@@ -179,30 +178,33 @@ namespace reaction
 
 		if (!isLRM && bulk)
 		{
-			jpp.set("REACTION_MODEL", "MASS_ACTION_LAW");
-			char const* const scopeName = "reaction_bulk";
+			const int reactionTypes = 1;
+			jpp.set("NREAC_LIQUID", reactionTypes);
+			
+			char const* const scopeName = "liquid_reaction_000";
 			jpp.addScope(scopeName);
 			auto gs2 = util::makeGroupScope(jpp, scopeName);
 
+			jpp.set("TYPE", "MASS_ACTION_LAW");
+			
 			const int nReactions = 4;
-
 			std::vector<double> stoichMat(nReactions * nComp, 0.0);
 			std::vector<double> expFwd(nReactions * nComp, 0.0);
 			std::vector<double> expBwd(nReactions * nComp, 0.0);
 			std::vector<double> rateFwd(nReactions, 0.0);
 			std::vector<double> rateBwd(nReactions, 0.0);
-
+			
 			util::populate(stoichMat.data(), [](unsigned int idx) { return 2.0 * std::sin(0.5 + idx * 0.7); }, stoichMat.size());
 			util::populate(expFwd.data(), [](unsigned int idx) { return std::sin(0.1 + idx * 0.7) + 1.4; }, expFwd.size());
 			util::populate(expBwd.data(), [](unsigned int idx) { return std::sin(0.2 + idx * 0.3) + 1.1; }, expBwd.size());
 			util::populate(rateFwd.data(), [](unsigned int idx) { return std::sin(0.3 + idx * 0.2) * 0.5 + 1.5; }, rateFwd.size());
 			util::populate(rateBwd.data(), [](unsigned int idx) { return std::sin(0.4 + idx * 0.4) * 0.5 + 1.6; }, rateBwd.size());
 
-			jpp.set("MAL_STOICHIOMETRY_BULK", stoichMat);
-			jpp.set("MAL_EXPONENTS_BULK_FWD", expFwd);
-			jpp.set("MAL_EXPONENTS_BULK_BWD", expBwd);
-			jpp.set("MAL_KFWD_BULK", rateFwd);
-			jpp.set("MAL_KBWD_BULK", rateBwd);
+			jpp.set("MAL_STOICHIOMETRY", stoichMat);
+			jpp.set("MAL_EXPONENTS_FWD", expFwd);
+			jpp.set("MAL_EXPONENTS_BWD", expBwd);
+			jpp.set("MAL_KFWD", rateFwd);
+			jpp.set("MAL_KBWD", rateBwd);
 		}
 
 		if (!jpp.exists("NPARTYPE"))
@@ -216,26 +218,19 @@ namespace reaction
 
 			for (int i = 0; i < nParType; ++i)
 			{
-				if (!isCSTR)
-					jpp.pushScope("particle_type_" + std::string(3 - std::to_string(i).length(), '0') + std::to_string(i));
+				
+				jpp.pushScope("particle_type_" + std::string(3 - std::to_string(i).length(), '0') + std::to_string(i)); // particle_type_xxx
 
 				std::vector<int> nBound = jpp.getIntArray("NBOUND");
 				const int nTotalBound = std::accumulate(nBound.begin(), nBound.end(), 0);
 
-				std::string scope;
-				if (!isCSTR)
-				{
-					jpp.set("REACTION_MODEL", "MASS_ACTION_LAW");
-					scope = "reaction";
-				}
-				else
-				{
-					jpp.set("REACTION_MODEL_PARTICLE", "MASS_ACTION_LAW");
-					scope = "reaction_particle";
-				}
+				int nReac = 1;
+				jpp.set("NREAC_CROSS_PHASE", nReac);
 
-				jpp.addScope(scope);
-				auto gs2 = util::makeGroupScope(jpp, scope);
+				jpp.addScope("cross_phase_reaction_000"); // particle_type_xxx//cross_phase_reaction_000
+				auto gs3 = util::makeGroupScope(jpp, "cross_phase_reaction_000");
+
+				jpp.set("TYPE", "MASS_ACTION_LAW_CROSS_PHASE");
 
 				std::vector<double> stoichMatLiquid(nReactions * nComp, 0.0);
 				std::vector<double> expFwdLiquid(nReactions * nComp, 0.0);
@@ -279,7 +274,7 @@ namespace reaction
 					std::vector<double> expBwdLiquidModSolid(nReactions * nTotalBound, 0.0);
 					std::vector<double> expFwdSolidModLiquid(nReactions * nComp, 0.0);
 					std::vector<double> expBwdSolidModLiquid(nReactions * nComp, 0.0);
-
+					
 					util::populate(expFwdLiquidModSolid.data(), [](unsigned int idx) { return std::sin(idx * 0.7 + 0.1) * 0.5 + 1.6; }, expFwdLiquidModSolid.size());
 					util::populate(expBwdLiquidModSolid.data(), [](unsigned int idx) { return std::sin(idx * 0.7 + 0.2) * 0.5 + 1.6; }, expBwdLiquidModSolid.size());
 					util::populate(expFwdSolidModLiquid.data(), [](unsigned int idx) { return std::sin(idx * 0.7 + 0.3) * 0.5 + 1.6; }, expFwdSolidModLiquid.size());
@@ -357,7 +352,7 @@ namespace reaction
 		ad::prepareAdVectorSeedsForDenseMatrix(adY, 0, numDofs);
 		ad::copyToAd(yState.data(), adY, numDofs);
 		ad::resetAd(adRes, numDofs);
-		crm.model().residualCombinedAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, adY, adY + crm.nComp(), adRes, adRes + crm.nComp(), 1.0, crm.buffer());
+		crm.model().residualCombinedAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, adY, adY + crm.nComp(), adRes, adRes + crm.nComp(), 1.0, crm.buffer());
 
 		// Extract Jacobian
 		cadet::linalg::DenseMatrix jacAD;
@@ -367,30 +362,30 @@ namespace reaction
 		// Calculate analytic Jacobian
 		cadet::linalg::DenseMatrix jacAna;
 		jacAna.resize(numDofs, numDofs);
-		crm.model().analyticJacobianCombinedAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, yState.data(), yState.data() + crm.nComp(), 1.0, jacAna.row(0), jacAna.row(crm.nComp()), crm.buffer());
+		crm.model().analyticJacobianCombinedAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, yState.data(), yState.data() + crm.nComp(), 1.0, jacAna.row(0), jacAna.row(crm.nComp()), crm.buffer());
 
 		cadet::test::checkJacobianPatternFD(
 			[&](double const* lDir, double* res) -> void
-			{
-				std::fill_n(res, numDofs, 0.0);
-				crm.model().residualCombinedAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, lDir, lDir + crm.nComp(), res, res + crm.nComp(), 1.0, crm.buffer());
-			},
-			[&](double const* lDir, double* res) -> void
-			{
-				jacAna.multiplyVector(lDir, res);
-			},
+				{
+					std::fill_n(res, numDofs, 0.0);
+					crm.model().residualCombinedAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, lDir, lDir + crm.nComp(), res, res + crm.nComp(), 1.0, crm.buffer());
+				},
+			[&](double const* lDir, double* res) -> void 
+				{
+					jacAna.multiplyVector(lDir, res);
+				},
 			yState.data(), dir.data(), colA.data(), colB.data(), numDofs, numDofs);
 
 		cadet::test::checkJacobianPatternFD(
 			[&](double const* lDir, double* res) -> void
-			{
-				std::fill_n(res, numDofs, 0.0);
-				crm.model().residualCombinedAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, lDir, lDir + crm.nComp(), res, res + crm.nComp(), 1.0, crm.buffer());
-			},
-			[&](double const* lDir, double* res) -> void
-			{
-				jacAD.multiplyVector(lDir, res);
-			},
+				{
+					std::fill_n(res, numDofs, 0.0);
+					crm.model().residualCombinedAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, lDir, lDir + crm.nComp(), res, res + crm.nComp(), 1.0, crm.buffer());
+				},
+			[&](double const* lDir, double* res) -> void 
+				{
+					jacAD.multiplyVector(lDir, res);
+				},
 			yState.data(), dir.data(), colA.data(), colB.data(), numDofs, numDofs);
 
 		// Check Jacobians against each other
@@ -408,7 +403,7 @@ namespace reaction
 
 		// Evaluate with AD
 		ad::resetAd(adRes, numDofs);
-		crm.model().residualLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, adY, adRes, 1.0, crm.buffer());
+		crm.model().residualFluxAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, crm.nComp(), adY, adRes, 1.0, crm.buffer());
 
 		// Extract Jacobian
 		jacAD.setAll(0.0);
@@ -416,115 +411,33 @@ namespace reaction
 
 		// Calculate analytic Jacobian
 		jacAna.setAll(0.0);
-		crm.model().analyticJacobianLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, yState.data(), 1.0, jacAna.row(0), crm.buffer());
+		crm.model().analyticJacobianAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, crm.nComp(), yState.data(), 1.0, jacAna.row(0), crm.buffer());
 
 		delete[] adY;
 		delete[] adRes;
 
 		cadet::test::checkJacobianPatternFD(
 			[&](double const* lDir, double* res) -> void
-			{
-				std::fill_n(res, nComp, 0.0);
-				crm.model().residualLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, lDir, res, 1.0, crm.buffer());
-			},
-			[&](double const* lDir, double* res) -> void
-			{
-				jacAna.submatrixMultiplyVector(lDir, 0, 0, nComp, nComp, res);
-			},
+				{
+					std::fill_n(res, nComp, 0.0);
+					crm.model().residualFluxAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, crm.nComp(), lDir, res, 1.0, crm.buffer());
+				},
+			[&](double const* lDir, double* res) -> void 
+				{
+					jacAna.submatrixMultiplyVector(lDir, 0, 0, nComp, nComp, res);
+				},
 			yState.data(), dir.data(), colA.data(), colB.data(), nComp, nComp);
 
 		cadet::test::checkJacobianPatternFD(
 			[&](double const* lDir, double* res) -> void
-			{
-				std::fill_n(res, nComp, 0.0);
-				crm.model().residualLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, lDir, res, 1.0, crm.buffer());
-			},
-			[&](double const* lDir, double* res) -> void
-			{
-				jacAD.submatrixMultiplyVector(lDir, 0, 0, nComp, nComp, res);
-			},
-			yState.data(), dir.data(), colA.data(), colB.data(), nComp, nComp);
-
-		// Check Jacobians against each other
-		for (unsigned int row = 0; row < nComp; ++row)
-		{
-			for (unsigned int col = 0; col < nComp; ++col)
-			{
-				CAPTURE(row);
-				CAPTURE(col);
-				CHECK(jacAna.native(row, col) == makeApprox(jacAD.native(row, col), absTol, relTol));
-			}
-		}
-	}
-
-	void testLiquidReactionJacobianAD(const char* modelName, unsigned int nComp, unsigned int const* nBound, const char* config, double const* point, double absTol, double relTol)
-	{
-		ConfiguredDynamicReactionModel crm = ConfiguredDynamicReactionModel::create(modelName, nComp, nBound, config);
-
-		const unsigned int numDofs = crm.nComp() + crm.numBoundStates();
-		std::vector<double> yState(numDofs, 0.0);
-		std::copy_n(point, numDofs, yState.data());
-
-		std::vector<double> dir(numDofs, 0.0);
-		std::vector<double> colA(numDofs, 0.0);
-		std::vector<double> colB(numDofs, 0.0);
-
-		// Enable AD
-		cadet::ad::setDirections(cadet::ad::getMaxDirections());
-		cadet::active* adRes = new cadet::active[numDofs];
-		cadet::active* adY = new cadet::active[numDofs];
-
-		// Evaluate with AD
-		ad::prepareAdVectorSeedsForDenseMatrix(adY, 0, numDofs);
-		ad::copyToAd(yState.data(), adY, numDofs);
-		ad::resetAd(adRes, numDofs);
-
-		// Extract Jacobian
-		cadet::linalg::DenseMatrix jacAD;
-		jacAD.resize(numDofs, numDofs);
-		ad::extractDenseJacobianFromAd(adRes, 0, jacAD);
-
-		// Calculate analytic Jacobian
-		cadet::linalg::DenseMatrix jacAna;
-		jacAna.resize(numDofs, numDofs);
-
-		// Evaluate with AD
-		ad::resetAd(adRes, numDofs);
-		crm.model().residualLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, adY, adRes, 1.0, crm.buffer());
-
-		// Extract Jacobian
-		jacAD.setAll(0.0);
-		ad::extractDenseJacobianFromAd(adRes, 0, jacAD);
-
-		// Calculate analytic Jacobian
-		jacAna.setAll(0.0);
-		crm.model().analyticJacobianLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, yState.data(), 1.0, jacAna.row(0), crm.buffer());
-
-		delete[] adY;
-		delete[] adRes;
-
-		cadet::test::checkJacobianPatternFD(
-			[&](double const* lDir, double* res) -> void
-			{
-				std::fill_n(res, nComp, 0.0);
-				crm.model().residualLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, lDir, res, 1.0, crm.buffer());
-			},
-			[&](double const* lDir, double* res) -> void
-			{
-				jacAna.submatrixMultiplyVector(lDir, 0, 0, nComp, nComp, res);
-			},
-			yState.data(), dir.data(), colA.data(), colB.data(), nComp, nComp);
-
-		cadet::test::checkJacobianPatternFD(
-			[&](double const* lDir, double* res) -> void
-			{
-				std::fill_n(res, nComp, 0.0);
-				crm.model().residualLiquidAdd(1.0, 0u, ColumnPosition{ 0.0, 0.0, 0.0 }, lDir, res, 1.0, crm.buffer());
-			},
-			[&](double const* lDir, double* res) -> void
-			{
-				jacAD.submatrixMultiplyVector(lDir, 0, 0, nComp, nComp, res);
-			},
+				{
+					std::fill_n(res, nComp, 0.0);
+					crm.model().residualFluxAdd(1.0, 0u, ColumnPosition{0.0, 0.0, 0.0}, crm.nComp(), lDir, res, 1.0, crm.buffer());
+				},
+			[&](double const* lDir, double* res) -> void 
+				{
+					jacAD.submatrixMultiplyVector(lDir, 0, 0, nComp, nComp, res);
+				},
 			yState.data(), dir.data(), colA.data(), colB.data(), nComp, nComp);
 
 		// Check Jacobians against each other
