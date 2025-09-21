@@ -157,6 +157,7 @@ public:
 		return true;
 	}
 
+	virtual unsigned int numReactions() const CADET_NOEXCEPT { return _stoichiometry.columns(); }
 	virtual unsigned int numReactionsLiquid() const CADET_NOEXCEPT { return _stoichiometry.columns(); }
 	virtual unsigned int numReactionsCombined() const CADET_NOEXCEPT { return 0; }
 
@@ -402,7 +403,7 @@ protected:
 	}
 
 		template <typename StateType, typename ResidualType, typename ParamType, typename FactorType>
-	int residualLiquidImpl(double t, unsigned int secIdx, const ColumnPosition& colPos,
+	int residualFluxImpl(double t, unsigned int secIdx, const ColumnPosition& colPos, const unsigned int nStates,
 		StateType const* y, ResidualType* res, const FactorType& factor, LinearBufferAllocator workSpace) const
 	{
 		typename ParamHandler_t::ParamsHandle const p = _paramHandler.update(t, secIdx, colPos, _nComp, _nBoundStates, workSpace);
@@ -530,7 +531,7 @@ protected:
 	}
 
 	template <typename RowIterator>
-	void jacobianLiquidImpl(double t, unsigned int secIdx, const ColumnPosition& colPos, double const* y, double factor, const RowIterator& jac, LinearBufferAllocator workSpace) const
+	void jacobianFluxImpl(double t, unsigned int secIdx, const ColumnPosition& colPos, const unsigned int nStates, double const* y, double factor, const RowIterator& jac, LinearBufferAllocator workSpace) const
 	{
 		typename ParamHandler_t::ParamsHandle const p = _paramHandler.update(t, secIdx, colPos, _nComp, _nBoundStates, workSpace);
 
