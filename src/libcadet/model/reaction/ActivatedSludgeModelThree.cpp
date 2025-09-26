@@ -406,6 +406,7 @@ protected:
 	int residualFluxImpl(double t, unsigned int secIdx, const ColumnPosition& colPos, const unsigned int nStates,
 		StateType const* y, ResidualType* res, const FactorType& factor, LinearBufferAllocator workSpace) const
 	{
+		LOG(Debug) << "asm3 residualFluxImpl " << colPos.axial << ", " << colPos.particle;
 		typename ParamHandler_t::ParamsHandle const p = _paramHandler.update(t, secIdx, colPos, _nComp, _nBoundStates, workSpace);
 
 		// Calculate fluxes
