@@ -107,6 +107,7 @@ public:
 		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), &fieldBuffer[0], nComp, nBoundStates);
 		_qMax.prepareCache(localParams->qMax, workSpace);
 		_qMax.update(cadet::util::dataOfLocalVersion(localParams->qMax), &fieldBuffer[0], nComp, nBoundStates);
+		LOG(Debug) << "  kA,kD,qMax = " << static_cast<double>(localParams->kA[0]) << ", " << static_cast<double>(localParams->kD[0]) << ", " << static_cast<double>(localParams->qMax[0]);
 
 		return localParams;
 	}

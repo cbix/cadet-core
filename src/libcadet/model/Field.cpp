@@ -83,7 +83,6 @@ std::vector<int> Field::dimensionMap(std::vector<std::string> dims)
 }
 
 double Field::valueAtIndex(std::vector<size_t> idx) {
-  LOG(Trace) << "valueAtIndex" << idx;
   size_t n = _dimensions.size();
   if (idx.size() != n || n == 0) {
     throw std::domain_error("Number of dimensions doesn't match or is zero");
@@ -99,6 +98,7 @@ double Field::valueAtIndex(std::vector<size_t> idx) {
     index += currentIndex * size;
     size *= currentDimSize;
   }
+  LOG(Trace) << "valueAtIndex" << idx << " = " << _data[index];
   return _data[index];
 }
 
@@ -138,6 +138,7 @@ double Field::interpolateValue(std::vector<double> coords) {
       weight = (coord - coord_l) / (coord_r - coord_l);
     }
     bounds.push_back({l, r, weight});
+    LOG(Trace) << "adding bound [" << l << "," << r << "] *" << weight;
   }
 
   typedef struct {
@@ -147,17 +148,17 @@ double Field::interpolateValue(std::vector<double> coords) {
   std::vector<field_bound_sample_t> boundSamples;
   for (const field_interp_bounds_t &bound : bounds) {
     if (boundSamples.size() == 0) {
-      boundSamples.push_back({{bound.lower}, bound.weight});
-      boundSamples.push_back({{bound.upper}, 1 - bound.weight});
+      boundSamples.push_back({{bound.lower}, 1 - bound.weight});
+      boundSamples.push_back({{bound.upper}, bound.weight});
       continue;
     }
     size_t n = boundSamples.size();
     for (size_t i = 0; i < n; i++) {
       field_bound_sample_t sampleUpper = boundSamples[i];
       boundSamples[i].idx.push_back(bound.lower);
-      boundSamples[i].weight *= bound.weight;
+      boundSamples[i].weight *= 1 - bound.weight;
       sampleUpper.idx.push_back(bound.upper);
-      sampleUpper.weight *= 1 - bound.weight;
+      sampleUpper.weight *= bound.weight;
       boundSamples.push_back(sampleUpper);
     }
   }

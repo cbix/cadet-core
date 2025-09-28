@@ -237,7 +237,7 @@ namespace model
 			}
 
 			_dimensionMaps.resize(_fields.size());
-			_timeDimIdx.resize(_fields.size());
+			_timeDimIdx.resize(_fields.size(), -1);
 			for (unsigned int i = 0; i < _fields.size(); ++i)
 			{
 				Field* field = _fields[i];
