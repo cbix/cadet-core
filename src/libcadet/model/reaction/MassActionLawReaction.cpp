@@ -75,14 +75,83 @@ public:
 		return validateConfig(nReactions, nComp, nBoundStates);
 	}
 
+	inline void registerParameters(std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kFwd.registerParam("MAL_KFWD", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_kBwd.registerParam("MAL_KBWD", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+	}
+
+	inline void reserve(unsigned int nReactions, unsigned int nComp, unsigned int nBoundStates)
+	{
+		_kFwd.reserve(nReactions, nComp, nBoundStates);
+		_kBwd.reserve(nReactions, nComp, nBoundStates);
+	}
+
+	inline ParamsHandle update(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+		evaluateField({ t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+
+		_kFwd.prepareCache(localParams->kFwd, workSpace);
+		_kFwd.update(cadet::util::dataOfLocalVersion(localParams->kFwd), &fieldBuffer[0], nComp, nBoundStates);
+		_kBwd.prepareCache(localParams->kBwd, workSpace);
+		_kBwd.update(cadet::util::dataOfLocalVersion(localParams->kBwd), &fieldBuffer[0], nComp, nBoundStates);
+
+		return localParams;
+	}
+
+	inline std::tuple<ParamsHandle, ParamsHandle> updateTimeDerivative(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedScalar<params_t> p = workSpace.scalar<params_t>();
+
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+		BufferedArray<double> fieldDerivBuffer = workSpace.array<double>(_fields.size());
+
+		evaluateField({ t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+		evaluateTimeDerivativeField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldDerivBuffer));
+
+		_kFwd.prepareCache(localParams->kFwd, workSpace);
+		_kFwd.update(cadet::util::dataOfLocalVersion(localParams->kFwd), &fieldBuffer[0], nComp, nBoundStates);
+		_kFwd.prepareCache(p->kFwd, workSpace);
+		_kFwd.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kFwd), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		_kBwd.prepareCache(localParams->kBwd, workSpace);
+		_kBwd.update(cadet::util::dataOfLocalVersion(localParams->kBwd), &fieldBuffer[0], nComp, nBoundStates);
+		_kBwd.prepareCache(p->kFwd, workSpace);
+		_kBwd.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kBwd), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		return std::make_tuple<ParamsHandle, ParamsHandle>(std::move(localParams), std::move(p));
+	}
+
+	inline std::size_t cacheSize(unsigned int nReactions, unsigned int nComp, unsigned int totalNumBoundStates) const CADET_NOEXCEPT
+	{
+		return 2 * sizeof(params_t) + alignof(params_t) + 2 * 2 * sizeof(double) + alignof(double) + 2 * (
+			_kFwd.additionalDynamicMemory(nReactions, nComp, totalNumBoundStates)
+			+ _kBwd.additionalDynamicMemory(nReactions, nComp, totalNumBoundStates)
+		);
+	}
+
+	inline const FieldScalarReactionDependentParameter& kFwd() const CADET_NOEXCEPT { return _kFwd; }
+	inline FieldScalarReactionDependentParameter& kFwd() CADET_NOEXCEPT { return _kFwd; }
+	inline const FieldScalarReactionDependentParameter& kBwd() const CADET_NOEXCEPT { return _kBwd; }
+	inline FieldScalarReactionDependentParameter& kBwd() CADET_NOEXCEPT { return _kBwd; }
+
 protected:
-	inline bool validateConfig(unsigned int nComp, unsigned int const* nBoundStates);
+	inline bool validateConfig(unsigned int nReactions, unsigned int nComp, unsigned int const* nBoundStates);
 	FieldScalarReactionDependentParameter _kFwd;
 	FieldScalarReactionDependentParameter _kBwd;
 };
 
 } // namespace model
 } // namespace cadet
+
+namespace cadet
+{
+
+namespace model
+{
 
 inline const char* MassActionLawParamHandler::identifier() CADET_NOEXCEPT { return "MASS_ACTION_LAW"; }
 
@@ -94,6 +163,13 @@ inline bool MassActionLawParamHandler::validateConfig(unsigned int nReactions, u
 inline const char* ExtMassActionLawParamHandler::identifier() CADET_NOEXCEPT { return "EXT_MASS_ACTION_LAW"; }
 
 inline bool ExtMassActionLawParamHandler::validateConfig(unsigned int nReactions, unsigned int nComp, unsigned int const* nBoundStates)
+{
+	return true;
+}
+
+inline const char* FieldMassActionLawParamHandler::identifier() CADET_NOEXCEPT { return "FIELD_MASS_ACTION_LAW"; }
+
+inline bool FieldMassActionLawParamHandler::validateConfig(unsigned int nReactions, unsigned int nComp, unsigned int const* nBoundStates)
 {
 	return true;
 }
@@ -470,6 +546,7 @@ protected:
 
 typedef MassActionLawReactionBase<MassActionLawParamHandler> MassActionLawReaction;
 typedef MassActionLawReactionBase<ExtMassActionLawParamHandler> ExternalMassActionLawReaction;
+typedef MassActionLawReactionBase<FieldMassActionLawParamHandler> FieldMassActionLawReaction;
 
 namespace reaction
 {
@@ -477,6 +554,7 @@ namespace reaction
 	{
 		reactions[MassActionLawReaction::identifier()] = []() { return new MassActionLawReaction(); };
 		reactions[ExternalMassActionLawReaction::identifier()] = []() { return new ExternalMassActionLawReaction(); };
+		reactions[FieldMassActionLawReaction::identifier()] = []() { return new FieldMassActionLawReaction(); };
 	}
 }  // namespace reaction
 
