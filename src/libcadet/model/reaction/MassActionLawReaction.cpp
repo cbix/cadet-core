@@ -50,6 +50,40 @@ namespace cadet
 namespace model
 {
 
+class FieldMassActionLawParamHandler : public FieldParamHandlerBase
+{
+public:
+	struct VariableParams
+	{
+		util::LocalVector<active> kFwd;
+		util::LocalVector<active> kBwd;
+	};
+
+	typedef VariableParams params_t;
+	typedef ConstBufferedScalar<params_t> ParamsHandle;
+
+	static inline const char* identifier() CADET_NOEXCEPT;
+
+	FieldMassActionLawParamHandler() CADET_NOEXCEPT { }
+
+	inline bool configure(IParameterProvider& paramProvider, unsigned int nReactions, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kFwd.configure("MAL_KFWD", paramProvider, nComp, nBoundStates);
+		_kBwd.configure("MAL_KBWD", paramProvider, nComp, nBoundStates);
+
+		FieldParamHandlerBase::configure(paramProvider, { "MAL_KFWD", "MAL_KBWD" }, { "TIME", "AXIAL", "RADIAL", "PARTICLE" });
+		return validateConfig(nReactions, nComp, nBoundStates);
+	}
+
+protected:
+	inline bool validateConfig(unsigned int nComp, unsigned int const* nBoundStates);
+	FieldScalarReactionDependentParameter _kFwd;
+	FieldScalarReactionDependentParameter _kBwd;
+};
+
+} // namespace model
+} // namespace cadet
+
 inline const char* MassActionLawParamHandler::identifier() CADET_NOEXCEPT { return "MASS_ACTION_LAW"; }
 
 inline bool MassActionLawParamHandler::validateConfig(unsigned int nReactions, unsigned int nComp, unsigned int const* nBoundStates)
