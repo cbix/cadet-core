@@ -43,6 +43,7 @@ public:
 
 	virtual bool configure(IParameterProvider& paramProvider, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx) { return true; }
 
+	virtual void setFields(Field** fields, unsigned int size) { }
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { }
 
 	virtual bool hasParameter(const ParameterId& pId) const { return false; }

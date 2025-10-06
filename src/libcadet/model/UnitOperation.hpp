@@ -18,6 +18,7 @@
 #ifndef LIBCADET_IUNITOPERATION_HPP_
 #define LIBCADET_IUNITOPERATION_HPP_
 
+#include "cadet/Field.hpp"
 #include "cadet/Model.hpp"
 #include "AutoDiff.hpp"
 
@@ -535,6 +536,8 @@ public:
 	 */
 	virtual void leanConsistentInitialSensitivity(const SimulationTime& simTime, const ConstSimulationState& simState,
 		std::vector<double*>& vecSensY, std::vector<double*>& vecSensYdot, active const* const adRes, util::ThreadLocalStorage& threadLocalMem) = 0;
+
+	virtual void setFields(Field **fields, unsigned int size) = 0;
 
 	/**
 	 * @brief Sets external functions for this binding model

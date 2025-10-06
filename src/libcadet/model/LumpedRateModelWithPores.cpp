@@ -1424,6 +1424,16 @@ void LumpedRateModelWithPores<ConvDispOperator>::multiplyWithDerivativeJacobian(
 }
 
 template <typename ConvDispOperator>
+void LumpedRateModelWithPores<ConvDispOperator>::setFields(Field** fields, unsigned int size)
+{
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setFields(fields, size);
+	}
+}
+
+template <typename ConvDispOperator>
 void LumpedRateModelWithPores<ConvDispOperator>::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)
 {
 	for (IBindingModel* bm : _binding)

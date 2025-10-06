@@ -121,6 +121,8 @@ public:
 		return 0;
 	}
 
+	virtual void setFields(Field** fields, unsigned int size) { }
+
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { }
 
 	virtual void analyticJacobian(double t, unsigned int secIdx, const ColumnPosition& colPos, double const* y, int offsetCp, linalg::BandMatrix::RowIterator jac, LinearBufferAllocator workSpace) const

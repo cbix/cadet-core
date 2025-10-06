@@ -29,6 +29,7 @@
 #include "linalg/CompressedSparseMatrix.hpp"
 #include "AutoDiff.hpp"
 #include "Memory.hpp"
+#include "cadet/Field.hpp"
 
 namespace cadet
 {
@@ -109,6 +110,8 @@ public:
 	 * @return @c true if the configuration was successful, otherwise @c false
 	 */
 	virtual bool configure(IParameterProvider& paramProvider, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx) = 0;
+
+	virtual void setFields(Field** fields, unsigned int size) = 0;
 
 	/**
 	 * @brief Sets external functions for this dynamic reaction model

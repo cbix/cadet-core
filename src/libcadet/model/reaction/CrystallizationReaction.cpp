@@ -482,6 +482,7 @@ public:
 		return nullptr;
 	}
 
+	virtual void setFields(Field** fields, unsigned int size) { }
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { }
 	virtual bool dependsOnTime() const CADET_NOEXCEPT { return false; }
 	virtual bool requiresWorkspace() const CADET_NOEXCEPT { return false; }

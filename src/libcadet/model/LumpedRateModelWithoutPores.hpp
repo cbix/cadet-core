@@ -145,6 +145,7 @@ public:
 	virtual unsigned int localInletComponentIndex(unsigned int port) const CADET_NOEXCEPT;
 	virtual unsigned int localInletComponentStride(unsigned int port) const CADET_NOEXCEPT;
 
+	virtual void setFields(Field **fields, unsigned int size);
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size);
 	virtual void setSectionTimes(double const* secTimes, bool const* secContinuity, unsigned int nSections) { }
 

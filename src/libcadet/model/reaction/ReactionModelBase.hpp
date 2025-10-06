@@ -56,6 +56,7 @@ public:
 
 	virtual active* getParameter(const ParameterId& pId);
 
+	virtual void setFields(Field** fields, unsigned int size) { }
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { }
 
 protected:

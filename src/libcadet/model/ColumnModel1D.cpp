@@ -18,6 +18,7 @@
 #include "ParamReaderScopes.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/ExternalFunction.hpp"
+#include "cadet/Field.hpp"
 #include "cadet/SolutionRecorder.hpp"
 #include "ConfigurationHelper.hpp"
 #include "model/BindingModel.hpp"
@@ -1229,6 +1230,15 @@ void ColumnModel1D::multiplyWithDerivativeJacobian(const SimulationTime& simTime
 
 	// Handle inlet DOFs (all algebraic)
 	std::fill_n(ret, _disc.nComp, 0.0);
+}
+
+void ColumnModel1D::setFields(Field** fields, unsigned int size)
+{
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setFields(fields, size);
+	}
 }
 
 void ColumnModel1D::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)

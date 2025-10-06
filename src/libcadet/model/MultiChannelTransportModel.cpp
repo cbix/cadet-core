@@ -15,6 +15,7 @@
 #include "ParamReaderScopes.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/ExternalFunction.hpp"
+#include "cadet/Field.hpp"
 #include "cadet/SolutionRecorder.hpp"
 #include "ConfigurationHelper.hpp"
 #include "model/ReactionModel.hpp"
@@ -954,6 +955,11 @@ void MultiChannelTransportModel::multiplyWithDerivativeJacobian(const Simulation
 
 	// Handle inlet DOFs (all algebraic)
 	std::fill_n(ret, _disc.nComp * _disc.nChannel, 0.0);
+}
+
+void MultiChannelTransportModel::setFields(Field** fields, unsigned int size)
+{
+	// TODO: Add exchange here
 }
 
 void MultiChannelTransportModel::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)

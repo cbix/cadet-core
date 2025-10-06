@@ -173,6 +173,7 @@ namespace
 		virtual void leanConsistentInitialSensitivity(const cadet::SimulationTime& simTime, const cadet::ConstSimulationState& simState, std::vector<double*>& vecSensY,
 			std::vector<double*>& vecSensYdot, cadet::active const* const adRes, cadet::util::ThreadLocalStorage& tls) { }
 
+		virtual void setFields(cadet::Field** fields, unsigned int size) { }
 		virtual void setExternalFunctions(cadet::IExternalFunction** extFuns, unsigned int size) { }
 
 		virtual void setFlowRates(cadet::active const* in, cadet::active const* out) CADET_NOEXCEPT

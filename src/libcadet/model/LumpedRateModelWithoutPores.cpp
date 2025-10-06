@@ -15,6 +15,7 @@
 #include "ParamReaderHelper.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/ExternalFunction.hpp"
+#include "cadet/Field.hpp"
 #include "cadet/SolutionRecorder.hpp"
 #include "ConfigurationHelper.hpp"
 #include "model/BindingModel.hpp"
@@ -827,6 +828,13 @@ void LumpedRateModelWithoutPores<ConvDispOperator>::multiplyWithDerivativeJacobi
 
 	// Handle inlet DOFs (all algebraic)
 	std::fill_n(ret, _disc.nComp, 0.0);
+}
+
+template <typename ConvDispOperator>
+void LumpedRateModelWithoutPores<ConvDispOperator>::setFields(Field** fields, unsigned int size)
+{
+	if (_binding[0])
+		_binding[0]->setFields(fields, size);
 }
 
 template <typename ConvDispOperator>

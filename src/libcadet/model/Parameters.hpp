@@ -32,6 +32,9 @@
 #include <type_traits>
 #include <algorithm>
 
+#include "cadet/Logging.hpp"
+#include "common/LoggerBase.hpp"
+
 namespace cadet
 {
 
@@ -1453,6 +1456,322 @@ protected:
 	util::SlicedVector<active> _linear;
 	util::SlicedVector<active> _quad;
 	util::SlicedVector<active> _cube;
+};
+
+/**
+ * @brief Scalar field parameter
+ * @details Just a single value.
+ */
+class FieldScalarParameter
+{
+public:
+
+	/**
+	 * @brief Underlying type
+	 */
+	typedef active storage_t;
+
+	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates) {
+		std::string param = varName + "_EXTFUN";
+		if (paramProvider.exists(param))
+		{
+			_fieldIdx = paramProvider.getInt(param);
+			// TODO handle edge cases as in FieldParamHandlerBase
+		}
+	}
+
+	inline void registerParam(const std::string& varName, std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void reserve(unsigned int nReactions, unsigned int nComp, unsigned int nBoundStates) { }
+
+	inline void update(active& result, double* extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		update(&result, extVal, nComp, nBoundStates);
+	}
+
+	inline void update(active* result, double* extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		if (_fieldIdx >= 0)
+			*result = extVal[_fieldIdx];
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(active& result, double extVal, double extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		updateTimeDerivative(&result, extVal, extTimeDiff, nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(active* result, double extVal, double extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		*result = extTimeDiff;
+	}
+
+	//inline storage_t& base() CADET_NOEXCEPT { return 0; }
+	//inline const storage_t& base() const CADET_NOEXCEPT { return 0; }
+
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT { return 0; }
+
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int nBoundStates) const CADET_NOEXCEPT { return 0; }
+
+	template <typename T>
+	inline void prepareCache(T& cache, LinearBufferAllocator& buffer) const { }
+
+	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
+
+protected:
+	int _fieldIdx;
+};
+
+/**
+ * @brief Scalar field-based component dependent parameter
+ * @details Just a single value.
+ */
+class FieldScalarComponentDependentParameter
+{
+public:
+
+	/**
+	 * @brief Underlying type
+	 */
+	typedef std::vector<active> storage_t;
+
+	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		std::string param = varName + "_EXTFUN";
+		if (paramProvider.exists(param))
+		{
+			_fieldIdx = paramProvider.getIntArray(param);
+			// TODO handle edge cases as in FieldParamHandlerBase
+		}
+		_fieldIdx.resize(nComp, -1);
+
+		// read constant values
+		if (paramProvider.exists(varName))
+		{
+			readParameterMatrix(_constValues, paramProvider, varName, nComp, 1);
+			if (_constValues.size() > 0)
+				_constValues.resize(nComp, _constValues[0]);
+		}
+		_constValues.resize(nComp, 0.0);
+	}
+
+	inline void registerParam(const std::string& varName, std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void reserve(unsigned int nReactions, unsigned int nComp, unsigned int nBoundStates) {
+
+	}
+
+	inline void update(std::vector<active>& result, double* extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		update(result.data(), extVal, nComp, nBoundStates);
+	}
+
+	inline void update(active* result, double* extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		for (std::size_t i = 0; i < nComp; ++i)
+		{
+			int f = _fieldIdx[i];
+			if (f >= 0)
+				result[i] = extVal[f];
+			else
+				result[i] = _constValues[i];
+		}
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(std::vector<active>& result, double* extVal, double* extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		updateTimeDerivative(result.data(), extVal, extTimeDiff, nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(active* result, double* extVal, double* extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		for (size_t i = 0; i < nComp; ++i)
+		{
+			int f = _fieldIdx[i];
+			if (f >= 0)
+				result[i] = extTimeDiff[f];
+		}
+	}
+
+	//inline storage_t& base() CADET_NOEXCEPT { return 0; }
+	//inline const storage_t& base() const CADET_NOEXCEPT { return 0; }
+
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT
+	{
+		return nComp * sizeof(active) + alignof(active);
+	}
+
+	inline std::size_t additionalDynamicMemory(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int nBoundStates) const CADET_NOEXCEPT
+	{
+		return nComp * sizeof(active) + alignof(active);
+	}
+
+	template <typename T>
+	inline void prepareCache(T& cache, LinearBufferAllocator& buffer) const
+	{
+		cache.fromTemplate(buffer, _constValues);
+	}
+
+	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
+
+protected:
+	std::vector<int> _fieldIdx;
+	std::vector<active> _constValues;
+
+};
+
+/**
+ * @brief Scalar field-based reaction dependent parameter
+ * @details Just a single value.
+ */
+class FieldScalarReactionDependentParameter
+{
+public:
+
+	/**
+	 * @brief Underlying type
+	 */
+	typedef std::vector<active> storage_t;
+
+	inline void configure(const std::string& varName, IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		// readParameterMatrix(_base, paramProvider, "EXT_" + varName, nComp, 1);
+		// readParameterMatrix(_base, paramProvider, "EXT_" + varName, 1, 1);
+		std::string param = varName + "_EXTFUN";
+		if (paramProvider.exists(param))
+		{
+			_fieldIdx = paramProvider.getIntArray(param);
+			// TODO handle edge cases as in FieldParamHandlerBase
+		}
+		_fieldIdx.resize(1, -1);
+
+		// read constant values
+		if (paramProvider.exists(varName))
+		{
+			readParameterMatrix(_constValues, paramProvider, varName, 1, 1);
+			if (_constValues.size() > 0)
+				_constValues.resize(1, _constValues[0]);
+		}
+		_constValues.resize(1, 0.0);
+	}
+
+	inline void registerParam(const std::string& varName, std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		/*
+		const StringHash paramHash = hashStringRuntime(varName + "_EXTFUN");
+		registerParam1DArray(parameters, _base, [=](bool multi, unsigned int r) { return makeParamId(paramHash, unitOpIdx, CompIndep, parTypeIdx, BoundStateIndep, r, SectionIndep); });
+		*/
+	}
+
+	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) { }
+
+	inline void reserve(unsigned int nReactions, unsigned int nComp, unsigned int nBoundStates) {
+
+	}
+
+	inline void update(std::vector<active>& result, double* extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		update(result.data(), extVal, nComp, nBoundStates);
+	}
+
+	inline void update(active* result, double* extVal, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		for (std::size_t i = 0; i < _fieldIdx.size(); ++i)
+		{
+			int f = _fieldIdx[i];
+			if (f >= 0)
+				result[i] = extVal[f];
+			else
+				result[i] = _constValues[i];
+		}
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(std::vector<active>& result, double* extVal, double* extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		updateTimeDerivative(result.data(), extVal, extTimeDiff, nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Calculates time derivative of parameter in case of external dependence
+	 * @param [out] result Stores the result of the paramter
+	 * @param [in] extVal Value of the external function
+	 * @param [in] extTimeDiff Time derivative of the external function
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void updateTimeDerivative(active* result, double* extVal, double* extTimeDiff, unsigned int nComp, unsigned int const* nBoundStates) const
+	{
+		for (size_t i = 0; i < _fieldIdx.size(); ++i)
+		{
+			int f = _fieldIdx[i];
+			if (f >= 0)
+				result[i] = extTimeDiff[f];
+		}
+	}
+
+	//inline storage_t& base() CADET_NOEXCEPT { return 0; }
+	//inline const storage_t& base() const CADET_NOEXCEPT { return 0; }
+
+	inline std::size_t additionalDynamicMemory(unsigned int nReactions, unsigned int nComp, unsigned int totalNumBoundStates) const CADET_NOEXCEPT
+	{
+		return nReactions * sizeof(active) + alignof(active);
+	}
+
+	template <typename T>
+	inline void prepareCache(T& cache, LinearBufferAllocator& buffer) const
+	{
+		cache.fromTemplate(buffer, _constValues);
+	}
+
+	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
+
+protected:
+	std::vector<int> _fieldIdx;
+	std::vector<active> _constValues;
+
 };
 
 

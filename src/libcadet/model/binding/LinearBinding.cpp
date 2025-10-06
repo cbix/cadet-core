@@ -187,6 +187,200 @@ protected:
 };
 
 /**
+ * @brief Handles linear binding model parameters that depend on a field
+ */
+class FieldLinearParamHandler : public FieldParamHandlerBase
+{
+public:
+
+	/**
+	 * @brief Holds actual parameter data
+	 * @details The parameter data will be stored in a memory buffer. This requires
+	 *          control over the location of the data, which is not provided by
+	 *          std::vector and util::SlicedVector. There are "local" equivalents,
+	 *          util::LocalVector and util::LocalSlicedVector, for these types that
+	 *          allow to control the placement of the payload data. A single value (i.e.,
+	 *          a single active or double) can simply be put in the struct.
+	 */
+	struct VariableParams
+	{
+		util::LocalVector<active> kA; //!< Adsorption rate
+		util::LocalVector<active> kD; //!< Desorption rate
+	};
+
+	typedef VariableParams params_t;
+	typedef ConstBufferedScalar<params_t> ParamsHandle;
+
+	FieldLinearParamHandler() CADET_NOEXCEPT { }
+
+	/**
+	 * @brief Returns name of the binding model
+	 * @return Name of the binding model
+	 */
+	static const char* identifier() { return "FIELD_LINEAR"; }
+
+	/**
+	 * @brief Reads parameters and verifies them
+	 * @details See IBindingModel::configure() for details.
+	 * @param [in] paramProvider IParameterProvider used for reading parameters
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 * @return @c true if the parameters were read and validated successfully, otherwise @c false
+	 */
+	inline bool configure(IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kA.configure("LIN_KA", paramProvider, nComp, nBoundStates);
+		_kD.configure("LIN_KD", paramProvider, nComp, nBoundStates);
+		
+		// configure number of parameters and order in which coordinates are passed when evaluating field
+		FieldParamHandlerBase::configure(paramProvider, {"LIN_KA", "LIN_KD"}, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
+		return validateConfig(nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Registers all local parameters in a map for further use
+	 * @param [in,out] parameters Map in which the parameters are stored
+	 * @param [in] unitOpIdx Index of the unit operation used for registering the parameters
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void registerParameters(std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kA.registerParam("LIN_KA", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_kD.registerParam("LIN_KD", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Reserves space in the storage of the parameters
+	 * @param [in] numElem Number of elements (total)
+	 * @param [in] numSlices Number of slices / binding site types
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 */
+	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) \
+	{
+		_kA.reserve(numElem, numSlices, nComp, nBoundStates);
+		_kD.reserve(numElem, numSlices, nComp, nBoundStates);
+	}
+
+	/**
+	 * @brief Updates the parameter cache in order to take the external profile into account
+	 * @details The data and the returned value are constructed in the given @p workSpace memory buffer.
+	 * @param [in] t Current time
+	 * @param [in] z Axial coordinate in the column
+	 * @param [in] r Radial coordinate in the bead
+	 * @param [in] secIdx Index of the current section
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 * @param [in,out] workSpace Memory buffer for updated data
+	 * @return Externally dependent parameter values
+	 */
+	inline ParamsHandle update(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		LOG(Debug) << "LinearParamHandler update(" << t << ", " << secIdx << ", "
+			<< colPos.axial << "/" << colPos.radial << "/" << colPos.particle << ", "
+			<< nComp << ", ...)";
+		// Allocate params_t and buffer for function evaluation
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+
+		// Evaluate external functions in buffer
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+
+		// Prepare the buffer for the data and update the data
+		_kA.prepareCache(localParams->kA, workSpace);
+		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), &fieldBuffer[0], nComp, nBoundStates);
+
+		_kD.prepareCache(localParams->kD, workSpace);
+		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), &fieldBuffer[0], nComp, nBoundStates);
+
+		return localParams;
+	}
+
+	/**
+	 * @brief Calculates time derivative in case of external dependence
+	 * @details The time derivatives are constructed in the given @p workSpace memory buffer.
+	 * @param [in] t Current time
+	 * @param [in] z Axial coordinate in the column
+	 * @param [in] r Radial coordinate in the bead
+	 * @param [in] secIdx Index of the current section
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 * @param [in,out] workSpace Memory buffer for updated data
+	 * @return Tuple with externally dependent parameter values and their time derivatives
+	 */
+	inline std::tuple<ParamsHandle, ParamsHandle> updateTimeDerivative(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		// Allocate params_t for parameters and their time derivatives
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedScalar<params_t> p = workSpace.scalar<params_t>();
+
+		// Allocate buffer for external function values and their time derivatives
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+		BufferedArray<double> fieldDerivBuffer = workSpace.array<double>(_fields.size());
+
+		// evaluate field
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+		evaluateTimeDerivativeField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldDerivBuffer));
+
+		// Prepare the buffer for the data and update the data
+		_kA.prepareCache(localParams->kA, workSpace);
+		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), &fieldBuffer[0], nComp, nBoundStates);
+
+		_kA.prepareCache(p->kA, workSpace);
+		_kA.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kA), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		_kD.prepareCache(localParams->kD, workSpace);
+		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), &fieldBuffer[0], nComp, nBoundStates);
+
+		_kD.prepareCache(p->kD, workSpace);
+		_kD.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kD), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		return std::make_tuple<ParamsHandle, ParamsHandle>(std::move(localParams), std::move(p));
+	}
+
+	/**
+	 * @brief Returns how much memory is required for caching in bytes
+	 * @details Memory size in bytes.
+	 * @param [in] nComp Number of components
+	 * @param [in] totalNumBoundStates Total number of bound states
+	 * @param [in] nBoundStates Array with bound states for each component
+	 * @return Memory size in bytes
+	 */
+	inline std::size_t cacheSize(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT
+	{
+		// Required buffer memory:
+		//  + params_t object
+		//  + buffer for external function evaluations (2 parameters)
+		//  + buffer for external function time derivative evaluations (2 parameters)
+		//  + buffer for actual parameter data (memory for _kA data + memory for _kD data)
+		//  + buffer for parameter time derivatives (memory for _kA data + memory for _kD data)
+		return 2 * sizeof(params_t) + alignof(params_t) 
+			+ 2 * 2 * sizeof(double) + alignof(double) 
+			+ 2 * (_kA.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates) + _kD.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates));
+	}
+
+protected:
+
+	/**
+	 * @brief Validates recently read parameters
+	 * @param [in] nComp Number of components
+	 * @param [in] nBoundStates Array with number of bound states for each component
+	 * @return @c true if the parameters were validated successfully, otherwise @c false
+	 */
+	inline bool validateConfig(unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		// constant size, doesn't need validation
+		return true;
+	}
+
+	// Handlers provide configure(), reserve(), and registerParam() for parameters
+	FieldScalarComponentDependentParameter _kA; //!< Handler for adsorption rate
+	FieldScalarComponentDependentParameter _kD; //!< Handler for desorption rate
+};
+
+
+/**
  * @brief Handles linear binding model parameters that depend on an external function
  */
 class ExtLinearParamHandler : public ExternalParamHandlerBase
@@ -514,7 +708,14 @@ public:
 		return _paramHandler.cacheSize(nComp, totalNumBoundStates, nBoundStates);
 	}
 
-	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { _paramHandler.setExternalFunctions(extFuns, size); }
+	virtual void setFields(Field** fields, unsigned int size) {
+		LOG(Debug) << "setFields(" << size << ")";
+		_paramHandler.setFields(fields, size);
+	}
+
+	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) {
+		// only imlemented for ExternalLinearBinding
+	}
 
 	// The next three flux() function implementations and two analyticJacobian() function
 	// implementations are usually hidden behind
@@ -680,6 +881,7 @@ protected:
 
 typedef LinearBindingBase<LinearParamHandler> LinearBinding;
 typedef LinearBindingBase<ExtLinearParamHandler> ExternalLinearBinding;
+typedef LinearBindingBase<FieldLinearParamHandler> FieldLinearBinding;
 
 namespace binding
 {
@@ -687,6 +889,7 @@ namespace binding
 	{
 		bindings[LinearBinding::identifier()] = []() { return new LinearBinding(); };
 		bindings[ExternalLinearBinding::identifier()] = []() { return new ExternalLinearBinding(); };
+		bindings[FieldLinearBinding::identifier()] = []() { return new FieldLinearBinding(); };
 	}
 }  // namespace binding
 
