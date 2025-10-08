@@ -13,6 +13,7 @@
 #include "nonlin/Solver.hpp"
 #include "nonlin/AdaptiveTrustRegionNewton.hpp"
 #include "nonlin/LevenbergMarquardt.hpp"
+#include "nonlin/PseudoTransientContinuation.hpp"
 #include "nonlin/CompositeSolver.hpp"
 
 namespace cadet
@@ -29,14 +30,13 @@ namespace nonlin
 			return new RobustAdaptiveTrustRegionNewtonSolver();
 		if (name == LevenbergMarquardtSolver::identifier())
 			return new LevenbergMarquardtSolver();
+		if (name == PseudoTransientContinuationSolver::identifier())
+			return new PseudoTransientContinuationSolver();
 		if (name == CompositeSolver::identifier())
 			return new CompositeSolver();
 
 		// Default solver
-		CompositeSolver* cs = new CompositeSolver();
-		cs->addSubsolver(new RobustAdaptiveTrustRegionNewtonSolver());
-		cs->addSubsolver(new LevenbergMarquardtSolver());
-		return cs;
+		return new PseudoTransientContinuationSolver();
 	}
 
 } // namespace nonlin
