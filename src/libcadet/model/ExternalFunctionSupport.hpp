@@ -256,11 +256,10 @@ namespace model
 		std::vector<std::string> _params;
 		std::vector<std::string> _dimensions;
 		std::vector<Field*> _fields; //!< Pointer to the field, by global index 
-		std::vector<std::vector<int>> _fieldIndexes; //!< Index to the field, by parameter/component
 		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by field index
 		std::vector<int> _timeDimIdx; //!< Index of the time dimension, by field index
 
-		FieldParamHandlerBase() : _fields(), _fieldIndexes(), _dimensionMaps(), _timeDimIdx() { }
+		FieldParamHandlerBase() : _fields(), _dimensionMaps(), _timeDimIdx() { }
 
 		/**
 		 * @brief Configures the external data source of this externally dependent parameter set
@@ -273,31 +272,6 @@ namespace model
 			LOG(Debug) << "FieldParamHandlerBase::configure(" << params << ", " << dimensions << ")";
 			_params = params;
 			_dimensions = dimensions;
-			for (size_t i = 0; i < params.size(); ++i)
-			{
-				std::vector<int> idx;
-				std::string param = params[i] + "_EXTFUN";
-				if (!paramProvider.exists(param))
-					idx = paramProvider.getIntArray(param);
-
-				// FIXME _fieldIndexes is [param][comp]
-				if (idx.size() >= params.size())
-					_fieldIndexes[i] = idx;
-				else
-				{
-					_fieldIndexes.resize(params.size());
-					if (!idx.empty())
-					{
-						// Use one external function for all components
-						std::fill(_fieldIndexes[i].begin(), _fieldIndexes[i].end(), idx[0]);
-					}
-					else
-					{
-						// There is no external dependence configured
-						std::fill(_fieldIndexes[i].begin(), _fieldIndexes[i].end(), -1);
-					}
-				}
-			}
 		}
 
 		inline void evaluateField(std::vector<double> coords, double* buffer) const

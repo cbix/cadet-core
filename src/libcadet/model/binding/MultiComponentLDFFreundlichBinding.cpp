@@ -121,6 +121,9 @@ public:
 		_n.prepareCache(localParams->n, workSpace);
 		_n.update(cadet::util::dataOfLocalVersion(localParams->n), &fieldBuffer[0], nComp, nBoundStates);
 
+		LOG(Debug) << "MultiComponentLDFFreundlichParamHandler kLDF = " << static_cast<double>(localParams->kLDF[0])
+			<< ", kF = " << static_cast<double>(localParams->kF[0])
+			<< ", n = " << static_cast<double>(localParams->n[0]);
 		return localParams;
 	}
 
@@ -213,10 +216,10 @@ inline const char* FieldMultiComponentLDFFreundlichParamHandler::identifier() CA
 inline bool FieldMultiComponentLDFFreundlichParamHandler::validateConfig(unsigned int nComp, unsigned int const* nBoundStates)
 {
 	if ((_kLDF.size() != _kF.size()) || (_kLDF.size() != _n.size()) || (_kLDF.size() < nComp))
-		throw InvalidParameterException("FIELD_MCLDFFRL_KLDF, FIELD_MCLDFFRL_KF, and FIELD_MCLDFFRL_N have to have the same size");
+		throw InvalidParameterException("MCLDFFRL_KLDF, MCLDFFRL_KF, and MCLDFFRL_N have to have the same size");
 
 	if ((_a.slices() != nComp) || (_a.size() != nComp * nComp))
-		throw InvalidParameterException("FIELD_MCLDFFRL_A has to have NCOMP^2 elements");
+		throw InvalidParameterException("MCLDFFRL_A has to have NCOMP^2 elements");
 
 	return true;
 }

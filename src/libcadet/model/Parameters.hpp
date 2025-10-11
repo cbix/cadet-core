@@ -1647,7 +1647,7 @@ public:
 		cache.fromTemplate(buffer, _constValues);
 	}
 
-	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
+	inline std::size_t size() const CADET_NOEXCEPT { return _fieldIdx.size(); }
 
 protected:
 	std::vector<int> _fieldIdx;
@@ -1766,7 +1766,7 @@ public:
 		cache.fromTemplate(buffer, _constValues);
 	}
 
-	inline std::size_t size() const CADET_NOEXCEPT { return 1; }
+	inline std::size_t size() const CADET_NOEXCEPT { return _constValues.size(); }
 
 protected:
 	std::vector<int> _fieldIdx;
