@@ -2844,10 +2844,31 @@ void GeneralRateModel<ConvDispOperator>::multiplyWithDerivativeJacobian(const Si
 template <typename ConvDispOperator>
 void GeneralRateModel<ConvDispOperator>::setFields(Field** fields, unsigned int size)
 {
+	auto liquidReactions = _reaction.getDynReactionVector("liquid");
+	auto solidReactions = _reaction.getDynReactionVector("solid");
+	LOG(Debug) << "GeneralRateModel::setFields, size = " << size << ", "
+		<< _binding.size() << " bms, " << liquidReactions.size() << " liquid rms, "
+		<< solidReactions.size() << " solid rms";
 	for (IBindingModel* bm : _binding)
 	{
 		if (bm)
 			bm->setFields(fields, size);
+	}
+	
+	for (IDynamicReactionModel* rm : liquidReactions)
+	{
+		if (rm)
+		{
+			rm->setFields(fields, size);
+		}
+	}
+	
+	for (IDynamicReactionModel* rm : solidReactions)
+	{
+		if (rm)
+		{
+			rm->setFields(fields, size);
+		}
 	}
 }
 
