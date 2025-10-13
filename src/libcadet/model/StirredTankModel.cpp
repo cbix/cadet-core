@@ -379,11 +379,31 @@ void CSTRModel::setExternalFunctions(IExternalFunction **extFuns, unsigned int s
 
 void CSTRModel::setFields(Field **fields, unsigned int size)
 {
-	LOG(Debug) << "CSTRModel::setFields, size = " << size;
+	auto liquidReactions = _reaction.getDynReactionVector("liquid");
+	auto solidReactions = _reaction.getDynReactionVector("solid");
+	LOG(Debug) << "CSTRModel::setFields, size = " << size << ", "
+		<< _binding.size() << " bms, " << liquidReactions.size() << " liquid rms, "
+		<< solidReactions.size() << " solid rms";
 	for (IBindingModel* bm : _binding)
 	{
 		if (bm)
 			bm->setFields(fields, size);
+	}
+	
+	for (IDynamicReactionModel* rm : liquidReactions)
+	{
+		if (rm)
+		{
+			rm->setFields(fields, size);
+		}
+	}
+	
+	for (IDynamicReactionModel* rm : solidReactions)
+	{
+		if (rm)
+		{
+			rm->setFields(fields, size);
+		}
 	}
 }
 
