@@ -80,7 +80,7 @@ public:
 		_a.configure("MCLDFFRL_A", paramProvider, nComp, nBoundStates);
 		_tau.configure("MCLDFFRL_TAU", paramProvider, nComp, nBoundStates);
 
-		FieldParamHandlerBase::configure(paramProvider, {"MCLDFFRL_KLDF", "MCLDFFRL_KF", "MCLDFFRL_EXP"}, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
+		FieldParamHandlerBase::configure(paramProvider, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
 
 		return validateConfig(nComp, nBoundStates);
 	}

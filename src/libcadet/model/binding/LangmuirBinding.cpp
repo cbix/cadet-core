@@ -72,7 +72,7 @@ public:
 		_kD.configure("MCL_KD", paramProvider, nComp, nBoundStates);
 		_qMax.configure("MCL_QMAX", paramProvider, nComp, nBoundStates);
 
-		FieldParamHandlerBase::configure(paramProvider, { "MCL_KA", "MCL_KD", "MCL_QMAX" }, { "TIME", "AXIAL", "RADIAL", "PARTICLE" });
+		FieldParamHandlerBase::configure(paramProvider, { "TIME", "AXIAL", "RADIAL", "PARTICLE" });
 
 		return validateConfig(nComp, nBoundStates);
 	}

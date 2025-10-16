@@ -71,7 +71,7 @@ public:
 		_kFwd.configure("MAL_KFWD", paramProvider, nComp, nBoundStates);
 		_kBwd.configure("MAL_KBWD", paramProvider, nComp, nBoundStates);
 
-		FieldParamHandlerBase::configure(paramProvider, { "MAL_KFWD", "MAL_KBWD" }, { "TIME", "AXIAL", "RADIAL", "PARTICLE" });
+		FieldParamHandlerBase::configure(paramProvider, { "TIME", "AXIAL", "RADIAL", "PARTICLE" });
 		return validateConfig(nReactions, nComp, nBoundStates);
 	}
 

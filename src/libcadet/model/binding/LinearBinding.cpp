@@ -233,7 +233,7 @@ public:
 		_kD.configure("LIN_KD", paramProvider, nComp, nBoundStates);
 		
 		// configure number of parameters and order in which coordinates are passed when evaluating field
-		FieldParamHandlerBase::configure(paramProvider, {"LIN_KA", "LIN_KD"}, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
+		FieldParamHandlerBase::configure(paramProvider, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
 		return validateConfig(nComp, nBoundStates);
 	}
 

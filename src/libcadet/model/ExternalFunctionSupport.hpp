@@ -253,7 +253,6 @@ namespace model
 
 	protected:
 
-		std::vector<std::string> _params;
 		std::vector<std::string> _dimensions;
 		std::vector<Field*> _fields; //!< Pointer to the field, by global index 
 		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by field index
@@ -267,10 +266,9 @@ namespace model
 		 * @param [in] nParams Number of externally dependent parameters (also size of buffer)
 		 * @param [in] dimensions 
 		 */
-		inline void configure(IParameterProvider& paramProvider, std::vector<std::string> params, std::vector<std::string> dimensions)
+		inline void configure(IParameterProvider& paramProvider, std::vector<std::string> dimensions)
 		{			
-			LOG(Debug) << "FieldParamHandlerBase::configure(" << params << ", " << dimensions << ")";
-			_params = params;
+			LOG(Debug) << "FieldParamHandlerBase::configure(" << dimensions << ")";
 			_dimensions = dimensions;
 		}
 
