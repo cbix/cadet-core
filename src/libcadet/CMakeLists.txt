@@ -115,8 +115,9 @@ set(LIBCADET_EXCHANGEMODEL_SOURCES
 set(LIBCADET_REACTIONMODEL_SOURCES
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/reaction/DummyReaction.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/reaction/MassActionLawReaction.cpp
+	${CMAKE_SOURCE_DIR}/src/libcadet/model/reaction/MassActionLawReactionCrossPhase.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/reaction/MichaelisMentenReaction.cpp
-
+	${CMAKE_SOURCE_DIR}/src/libcadet/model/reaction/ActivatedSludgeModelThree.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/reaction/CrystallizationReaction.cpp
 )
 
@@ -156,6 +157,7 @@ set(LIBCADET_SOURCES
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/reaction/ReactionModelBase.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/binding/BindingModelBase.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/inlet/PiecewiseCubicPoly.cpp
+	${CMAKE_SOURCE_DIR}/src/libcadet/model/Field.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/extfun/LinearInterpolationExternalFunction.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/extfun/PiecewiseCubicPolyExternalFunction.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/model/paramdep/ParameterDependenceBase.cpp
@@ -174,6 +176,7 @@ set (LIBCADET_NONLINALG_SOURCES
 	${CMAKE_SOURCE_DIR}/src/libcadet/linalg/Gmres.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/nonlin/AdaptiveTrustRegionNewton.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/nonlin/LevenbergMarquardt.cpp
+	${CMAKE_SOURCE_DIR}/src/libcadet/nonlin/PseudoTransientContinuation.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/nonlin/CompositeSolver.cpp
 	${CMAKE_SOURCE_DIR}/src/libcadet/nonlin/Solver.cpp
 )

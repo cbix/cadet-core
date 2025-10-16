@@ -20,10 +20,9 @@
 
 #include "cadet/ExternalFunction.hpp"
 #include "cadet/Exceptions.hpp"
- 
-#include "LoggingUtils.hpp"
+#include "cadet/Field.hpp"
 #include "Logging.hpp"
-
+#include "LoggingUtils.hpp"
 #include "SimulationTypes.hpp"
 
 #include <vector>
@@ -44,6 +43,8 @@ namespace model
 	 */
 	struct ConstParamHandlerBase
 	{
+		inline void setFields(Field** fields, unsigned int size) { }
+
 		/**
 		 * @brief Sets external functions for this model
 		 * @param [in] extFuns Pointer to array of IExternalFunction objects of size @p size
@@ -93,6 +94,11 @@ namespace model
 	struct ExternalParamHandlerBase
 	{	
 	public:
+
+		inline void setFields(Field** field, int size)
+		{
+			// only implemented for FieldParamHandlerBase
+		}
 
 		/**
 		 * @brief Sets external functions for this model
@@ -206,6 +212,117 @@ namespace model
 					buffer[i] = 0.0;
 			}
 		}
+	};
+
+	/**
+	 * @brief Base class of model parameter storage classes that depend on a field
+	 */
+	struct FieldParamHandlerBase
+	{
+	public:
+
+		inline void setExternalFunctions(IExternalFunction** extFuns, int size)
+		{
+			// only implemented for ExternalParamHandlerBase
+		}
+
+		inline void setFields(Field** fields, unsigned int size)
+		{
+			LOG(Debug) << "FieldParamHandlerBase::setFields, size = " << size;
+			_fields.clear();
+			_fields.resize(size, nullptr);
+			for (unsigned int i = 0; i < size; ++i)
+			{
+				_fields[i] = fields[i];
+			}
+
+			_dimensionMaps.resize(_fields.size());
+			_timeDimIdx.resize(_fields.size(), -1);
+			for (unsigned int i = 0; i < _fields.size(); ++i)
+			{
+				Field* field = _fields[i];
+				if (field) {
+					_dimensionMaps[i] = field->dimensionMap(_dimensions);
+					_timeDimIdx[i] = field->dimensionIndex("TIME");
+				}
+			}
+		}
+
+		static bool dependsOnTime() CADET_NOEXCEPT { return true; }
+		static bool requiresWorkspace() CADET_NOEXCEPT { return true; }
+
+	protected:
+
+		std::vector<std::string> _dimensions;
+		std::vector<Field*> _fields; //!< Pointer to the field, by global index 
+		std::vector<std::vector<int>> _dimensionMaps; //!< Mapping model to field dimensions, by field index
+		std::vector<int> _timeDimIdx; //!< Index of the time dimension, by field index
+
+		FieldParamHandlerBase() : _fields(), _dimensionMaps(), _timeDimIdx() { }
+
+		/**
+		 * @brief Configures the external data source of this externally dependent parameter set
+		 * @param [in] paramProvider Parameter provider
+		 * @param [in] nParams Number of externally dependent parameters (also size of buffer)
+		 * @param [in] dimensions 
+		 */
+		inline void configure(IParameterProvider& paramProvider, std::vector<std::string> dimensions)
+		{			
+			LOG(Debug) << "FieldParamHandlerBase::configure(" << dimensions << ")";
+			_dimensions = dimensions;
+		}
+
+		inline void evaluateField(std::vector<double> coords, double* buffer) const
+		{
+			LOG(Debug) << "FieldParamHandlerBase::evaluateField for " << _fields.size() << " fields, coords = " << coords << ", " << _dimensionMaps.size() << " dimension maps";
+			for (unsigned int i = 0; i < _fields.size(); ++i)
+			{
+				LOG(Debug) << "FieldParamHandlerBase::evaluateField i = " << i;
+				Field* const field = _fields[i];
+				std::vector<int> dimMap = _dimensionMaps[i];
+				if (field)
+				{
+					std::vector<double> mappedCoords(dimMap.size(), 0.0);
+					for (unsigned int dimIdx = 0; dimIdx < dimMap.size(); ++dimIdx)
+					{
+						int mappedDimIdx = dimMap[dimIdx];
+						if (mappedDimIdx >= 0)
+							mappedCoords[dimIdx] = coords[mappedDimIdx];
+					}
+					buffer[i] = field->interpolateValue(mappedCoords);
+				}
+				else
+				{
+					buffer[i] = 0.0;
+				}
+			}
+		}
+
+		inline void evaluateTimeDerivativeField(std::vector<double> coords, double* buffer) const
+		{
+			for (unsigned int i = 0; i < _fields.size(); ++i)
+			{
+				Field* const field = _fields[i];
+				std::vector<int> dimMap = _dimensionMaps[i];
+				int timeIdx = _timeDimIdx[i];
+				if (field && timeIdx >= 0)
+				{
+					std::vector<double> mappedCoords(dimMap.size(), 0.0);
+					for (unsigned int dimIdx = 0; dimIdx < dimMap.size(); ++dimIdx)
+					{
+						int mappedDimIdx = dimMap[dimIdx];
+						if (mappedDimIdx >= 0)
+							mappedCoords[dimIdx] = coords[mappedDimIdx];
+					}
+					buffer[i] = field->interpolateDerivative(mappedCoords, timeIdx);
+				}
+				else
+				{
+					buffer[i] = 0.0;
+				}
+			}
+		}
+
 	};
 
 }  // namespace model

@@ -27,6 +27,7 @@
 #include "cadet/LibExportImport.hpp"
 #include "cadet/cadetCompilerInfo.hpp"
 #include "cadet/ParameterId.hpp"
+#include "cadet/Field.hpp"
 
 namespace cadet
 {
@@ -162,6 +163,14 @@ public:
 	 * @param [in] extFun External function object to be removed
 	 */
 	virtual void removeExternalFunction(IExternalFunction const* extFun) = 0;
+
+	/*
+	virtual unsigned int addField(Field& field) = 0;
+	virtual Field* getField(unsigned int index) = 0;
+	virtual Field const* getField(unsigned int index) const = 0;
+	virtual unsigned int numFields() const CADET_NOEXCEPT = 0;
+	virtual void removeField(Field const* field) = 0;
+	*/
 
 	/**
 	* @brief Returns the start and end indices of a unit operation's local slice in the global state vector

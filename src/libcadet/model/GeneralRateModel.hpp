@@ -29,6 +29,7 @@
 #include "Memory.hpp"
 #include "model/ModelUtils.hpp"
 #include "ParameterMultiplexing.hpp"
+#include "reaction/ReactionSystem.hpp"
 
 #include <array>
 #include <vector>
@@ -164,6 +165,7 @@ public:
 	virtual unsigned int localInletComponentIndex(unsigned int port) const CADET_NOEXCEPT;
 	virtual unsigned int localInletComponentStride(unsigned int port) const CADET_NOEXCEPT;
 
+	virtual void setFields(Field **fields, unsigned int size);
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size);
 	virtual void setSectionTimes(double const* secTimes, bool const* secContinuity, unsigned int nSections) { }
 
@@ -326,7 +328,8 @@ protected:
 //	IExternalFunction* _extFun; //!< External function (owned by library user)
 
 	ConvDispOperator _convDispOp; //!< Convection dispersion operator for interstitial volume transport
-	IDynamicReactionModel* _dynReactionBulk; //!< Dynamic reactions in the bulk volume
+	ReactionSystem _reaction;
+
 
 	linalg::BandMatrix* _jacP; //!< Particle jacobian diagonal blocks (all of them)
 	linalg::FactorizableBandMatrix* _jacPdisc; //!< Particle jacobian diagonal blocks (all of them) with time derivatives from BDF method

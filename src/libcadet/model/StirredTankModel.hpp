@@ -23,7 +23,10 @@
 #include "AutoDiff.hpp"
 #include "linalg/DenseMatrix.hpp"
 #include "model/ModelUtils.hpp"
+#include "reaction/ReactionSystem.hpp"
 #include "Memory.hpp"
+#include "LoggingUtils.hpp"
+#include "Logging.hpp"
 
 #include <array>
 #include <vector>
@@ -104,7 +107,8 @@ public:
 	virtual void leanConsistentInitialSensitivity(const SimulationTime& simTime, const ConstSimulationState& simState,
 		std::vector<double*>& vecSensY, std::vector<double*>& vecSensYdot, active const* const adRes, util::ThreadLocalStorage& threadLocalMem);
 
-	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size) { }
+	virtual void setFields(Field **fields, unsigned int size);
+	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size);
 
 	virtual void multiplyWithJacobian(const SimulationTime& simTime, const ConstSimulationState& simState, double const* yS, double alpha, double beta, double* ret);
 	virtual void multiplyWithDerivativeJacobian(const SimulationTime& simTime, const ConstSimulationState& simState, double const* sDot, double* ret);
@@ -175,8 +179,7 @@ protected:
 	std::vector<active> _initConditions; //!< Initial conditions, ordering: Liquid phase concentration, solid phase concentration, liquid volume
 	std::vector<double> _initConditionsDot; //!< Initial conditions for time derivative
 
-	std::vector <IDynamicReactionModel*> _dynReactionBulk; //!< Dynamic reactions in the bulk volume
-	bool _old_interface; // 
+	ReactionSystem _reaction;
 
 	class Exporter : public ISolutionExporter
 	{

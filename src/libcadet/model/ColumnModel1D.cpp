@@ -18,6 +18,7 @@
 #include "ParamReaderScopes.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/ExternalFunction.hpp"
+#include "cadet/Field.hpp"
 #include "cadet/SolutionRecorder.hpp"
 #include "ConfigurationHelper.hpp"
 #include "model/BindingModel.hpp"
@@ -1046,7 +1047,7 @@ int ColumnModel1D::residualBulk(double t, unsigned int secIdx, StateType const* 
 
 				linalg::BandedEigenSparseRowIterator jac(_globalJac, idxr.offsetC() + col * idxr.strideColNode());
 				// static_cast should be sufficient here, but this statement is also analyzed when wantJac = false
-				_dynReactionBulk->analyticJacobianLiquidAdd(t, secIdx, colPos, reinterpret_cast<double const*>(y), -1.0, jac, tlmAlloc);
+				//_dynReactionBulk->analyticJacobianAdd(t, secIdx, colPos, _disc.nComp, reinterpret_cast<double const*>(y), -1.0, jac, tlmAlloc);
 			}
 
 			return 0;
@@ -1057,13 +1058,13 @@ int ColumnModel1D::residualBulk(double t, unsigned int secIdx, StateType const* 
 		for (unsigned int col = 0; col < _disc.nPoints; ++col, y += idxr.strideColNode(), res += idxr.strideColNode())
 		{
 			const ColumnPosition colPos{ _convDispOp.relativeCoordinate(col), 0.0, 0.0};
-			_dynReactionBulk->residualLiquidAdd(t, secIdx, colPos, y, res, -1.0, tlmAlloc);
+			//_dynReactionBulk->residualFluxAdd(t, secIdx, colPos, _disc.nComp, y, res, -1.0, tlmAlloc);
 
 			if (wantJac)
 			{
 				linalg::BandedEigenSparseRowIterator jac(_globalJac, idxr.offsetC() + col * idxr.strideColNode());
 				// static_cast should be sufficient here, but this statement is also analyzed when wantJac = false
-				_dynReactionBulk->analyticJacobianLiquidAdd(t, secIdx, colPos, reinterpret_cast<double const*>(y), -1.0, jac, tlmAlloc);
+				//_dynReactionBulk->analyticJacobianAdd(t, secIdx, colPos, _disc.nComp, reinterpret_cast<double const*>(y), -1.0, jac, tlmAlloc);
 			}
 		}
 	}
@@ -1229,6 +1230,15 @@ void ColumnModel1D::multiplyWithDerivativeJacobian(const SimulationTime& simTime
 
 	// Handle inlet DOFs (all algebraic)
 	std::fill_n(ret, _disc.nComp, 0.0);
+}
+
+void ColumnModel1D::setFields(Field** fields, unsigned int size)
+{
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setFields(fields, size);
+	}
 }
 
 void ColumnModel1D::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)

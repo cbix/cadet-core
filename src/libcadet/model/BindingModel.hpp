@@ -31,6 +31,7 @@
 #include "AutoDiff.hpp"
 #include "SimulationTypes.hpp"
 #include "Memory.hpp"
+#include "cadet/Field.hpp"
 
 namespace cadet
 {
@@ -151,6 +152,8 @@ public:
 	 */
 	virtual void fillBoundPhaseInitialParameters(ParameterId* params, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx) const CADET_NOEXCEPT = 0;
 
+	virtual void setFields(Field** fields, unsigned int size) = 0;
+
 	/**
 	 * @brief Sets external functions for this binding model
 	 * @details The external functions are not owned by this IBindingModel.
@@ -251,7 +254,6 @@ public:
 	 * @return Size of the workspace in bytes
 	 */
 	virtual unsigned int workspaceSize(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT = 0;
-
 	/**
 	 * @brief Returns the amount of required AD seed vectors / directions
 	 * @details Only internally required AD directions count (e.g., for Jacobian computation).

@@ -20,8 +20,10 @@ namespace cadet
 		namespace reaction
 		{
 			void registerMassActionLawReaction(std::unordered_map<std::string, std::function<model::IDynamicReactionModel*()>>& reactions);
+			void registerMassActionLawReactionCrossPhase(std::unordered_map<std::string, std::function<model::IDynamicReactionModel* ()>>& reactions);
 			void registerDummyReaction(std::unordered_map<std::string, std::function<model::IDynamicReactionModel*()>>& reactions);
 			void registerMichaelisMentenReaction(std::unordered_map<std::string, std::function<model::IDynamicReactionModel*()>>& reactions);
+			void registerActivatedSludgeModelThreeReaction(std::unordered_map<std::string, std::function<model::IDynamicReactionModel* ()>>& reactions);
 
 			void registerCrystallizationReaction(std::unordered_map<std::string, std::function<model::IDynamicReactionModel*()>>& reactions);
 		}
@@ -32,7 +34,9 @@ namespace cadet
 		// Register all reaction models here
 		model::reaction::registerDummyReaction(_dynamicModels);
 		model::reaction::registerMassActionLawReaction(_dynamicModels);
+		model::reaction::registerMassActionLawReactionCrossPhase(_dynamicModels);
 		model::reaction::registerMichaelisMentenReaction(_dynamicModels);
+		model::reaction::registerActivatedSludgeModelThreeReaction(_dynamicModels);
 
 		model::reaction::registerCrystallizationReaction(_dynamicModels);
 	}

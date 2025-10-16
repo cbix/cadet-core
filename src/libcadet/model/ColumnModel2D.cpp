@@ -16,6 +16,7 @@
 #include "ParamReaderScopes.hpp"
 #include "cadet/Exceptions.hpp"
 #include "cadet/ExternalFunction.hpp"
+#include "cadet/Field.hpp"
 #include "cadet/SolutionRecorder.hpp"
 #include "ConfigurationHelper.hpp"
 #include "model/BindingModel.hpp"
@@ -1173,7 +1174,7 @@ int ColumnModel2D::residualBulk(double t, unsigned int secIdx, StateType const* 
 			const double z = _convDispOp.relativeAxialCoordinate(axNode);;
 
 			const ColumnPosition colPos{ z, r, 0.0 };
-			_dynReactionBulk->residualLiquidAdd(t, secIdx, colPos, y, res, -1.0, tlmAlloc);
+			_dynReactionBulk->residualFluxAdd(t, secIdx, colPos, _disc.nComp, y, res, -1.0, tlmAlloc);
 
 			if (wantJac)
 			{
@@ -1181,7 +1182,7 @@ int ColumnModel2D::residualBulk(double t, unsigned int secIdx, StateType const* 
 				linalg::BandedEigenSparseRowIterator jac(_globalJac, rowIdx);
 
 				// static_cast should be sufficient here, but this statement is also analyzed when wantJac = false
-				_dynReactionBulk->analyticJacobianLiquidAdd(t, secIdx, colPos, reinterpret_cast<double const*>(y), -1.0, jac, tlmAlloc);
+				//_dynReactionBulk->analyticJacobianAdd(t, secIdx, colPos, _disc.nComp, reinterpret_cast<double const*>(y), -1.0, jac, tlmAlloc);
 			}
 		}
 	}
@@ -1332,6 +1333,15 @@ void ColumnModel2D::multiplyWithDerivativeJacobian(const SimulationTime& simTime
 
 	// Handle inlet DOFs (all algebraic)
 	std::fill_n(ret, _disc.nComp, 0.0);
+}
+
+void ColumnModel2D::setFields(Field** fields, unsigned int size)
+{
+	for (IBindingModel* bm : _binding)
+	{
+		if (bm)
+			bm->setFields(fields, size);
+	}
 }
 
 void ColumnModel2D::setExternalFunctions(IExternalFunction** extFuns, unsigned int size)

@@ -49,6 +49,126 @@ namespace cadet
 namespace model
 {
 
+class FieldLangmuirParamHandler : public FieldParamHandlerBase
+{
+public:
+	struct VariableParams
+	{
+		util::LocalVector<active> kA;
+		util::LocalVector<active> kD;
+		util::LocalVector<active> qMax;
+	};
+
+	typedef VariableParams params_t;
+	typedef ConstBufferedScalar<params_t> ParamsHandle;
+
+	static inline const char* identifier() CADET_NOEXCEPT;
+
+	FieldLangmuirParamHandler() CADET_NOEXCEPT { }
+
+	inline bool configure(IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kA.configure("MCL_KA", paramProvider, nComp, nBoundStates);
+		_kD.configure("MCL_KD", paramProvider, nComp, nBoundStates);
+		_qMax.configure("MCL_QMAX", paramProvider, nComp, nBoundStates);
+
+		FieldParamHandlerBase::configure(paramProvider, { "TIME", "AXIAL", "RADIAL", "PARTICLE" });
+
+		return validateConfig(nComp, nBoundStates);
+	}
+
+	inline void registerParameters(std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kA.registerParam("MCL_KA", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_kD.registerParam("MCL_KD", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_qMax.registerParam("MCL_QMAX", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+	}
+
+	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) \
+	{
+		_kA.reserve(numElem, numSlices, nComp, nBoundStates);
+		_kD.reserve(numElem, numSlices, nComp, nBoundStates);
+		_qMax.reserve(numElem, numSlices, nComp, nBoundStates);
+	}
+
+	inline ParamsHandle update(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		LOG(Debug) << "LangmuirParamHandler update(" << t << ", " << secIdx << ", "
+			<< colPos.axial << "/" << colPos.radial << "/" << colPos.particle << ", "
+			<< nComp << ", ...)";
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+
+		_kA.prepareCache(localParams->kA, workSpace);
+		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), &fieldBuffer[0], nComp, nBoundStates);
+		_kD.prepareCache(localParams->kD, workSpace);
+		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), &fieldBuffer[0], nComp, nBoundStates);
+		_qMax.prepareCache(localParams->qMax, workSpace);
+		_qMax.update(cadet::util::dataOfLocalVersion(localParams->qMax), &fieldBuffer[0], nComp, nBoundStates);
+		LOG(Debug) << "  kA,kD,qMax = " << static_cast<double>(localParams->kA[0]) << ", " << static_cast<double>(localParams->kD[0]) << ", " << static_cast<double>(localParams->qMax[0]);
+
+		return localParams;
+	}
+
+	inline std::tuple<ParamsHandle, ParamsHandle> updateTimeDerivative(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedScalar<params_t> p = workSpace.scalar<params_t>();
+		
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+		BufferedArray<double> fieldDerivBuffer = workSpace.array<double>(_fields.size());
+
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+		evaluateTimeDerivativeField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldDerivBuffer));
+
+		_kA.prepareCache(localParams->kA, workSpace);
+		_kA.update(cadet::util::dataOfLocalVersion(localParams->kA), &fieldBuffer[0], nComp, nBoundStates);
+
+		_kA.prepareCache(p->kA, workSpace);
+		_kA.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kA), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		_kD.prepareCache(localParams->kD, workSpace);
+		_kD.update(cadet::util::dataOfLocalVersion(localParams->kD), &fieldBuffer[0], nComp, nBoundStates);
+
+		_kD.prepareCache(p->kD, workSpace);
+		_kD.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kD), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		_qMax.prepareCache(localParams->qMax, workSpace);
+		_qMax.update(cadet::util::dataOfLocalVersion(localParams->qMax), &fieldBuffer[0], nComp, nBoundStates);
+
+		_qMax.prepareCache(p->qMax, workSpace);
+		_qMax.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->qMax), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		return std::make_tuple<ParamsHandle, ParamsHandle>(std::move(localParams), std::move(p));
+	}
+
+	inline std::size_t cacheSize(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT
+	{
+		return 2 * sizeof(params_t) + alignof(params_t) + 2 * 3 * sizeof(double) + alignof(double) + 2 * (
+			_kA.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates)
+			+ _kD.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates)
+			+ _qMax.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates)
+		);
+	}
+
+protected:
+	inline bool validateConfig(unsigned int nComp, unsigned int const* nBoundStates);
+	FieldScalarComponentDependentParameter _kA;
+	FieldScalarComponentDependentParameter _kD;
+	FieldScalarComponentDependentParameter _qMax;
+};
+
+} // namespace model
+} // namespace cadet
+
+namespace cadet
+{
+
+namespace model
+{
+
 inline const char* LangmuirParamHandler::identifier() CADET_NOEXCEPT { return "MULTI_COMPONENT_LANGMUIR"; }
 
 inline bool LangmuirParamHandler::validateConfig(unsigned int nComp, unsigned int const* nBoundStates)
@@ -65,6 +185,16 @@ inline bool ExtLangmuirParamHandler::validateConfig(unsigned int nComp, unsigned
 {
 	if ((_kA.size() != _kD.size()) || (_kA.size() != _qMax.size()) || (_kA.size() < nComp))
 		throw InvalidParameterException("EXT_MCL_KA, EXT_MCL_KD, and EXT_MCL_QMAX have to have the same size");
+
+	return true;
+}
+
+inline const char* FieldLangmuirParamHandler::identifier() CADET_NOEXCEPT { return "FIELD_MULTI_COMPONENT_LANGMUIR"; }
+
+inline bool FieldLangmuirParamHandler::validateConfig(unsigned int nComp, unsigned int const* nBoundStates)
+{
+	if ((_kA.size() != _kD.size()) || (_kA.size() != _qMax.size()) || (_kA.size() < nComp))
+		throw InvalidParameterException("FIELD_MCL_KA, FIELD_MCL_KD, and FIELD_MCL_QMAX have to have the same size");
 
 	return true;
 }
@@ -250,6 +380,7 @@ protected:
 
 typedef LangmuirBindingBase<LangmuirParamHandler> LangmuirBinding;
 typedef LangmuirBindingBase<ExtLangmuirParamHandler> ExternalLangmuirBinding;
+typedef LangmuirBindingBase<FieldLangmuirParamHandler> FieldLangmuirBinding;
 
 namespace binding
 {
@@ -257,6 +388,7 @@ namespace binding
 	{
 		bindings[LangmuirBinding::identifier()] = []() { return new LangmuirBinding(); };
 		bindings[ExternalLangmuirBinding::identifier()] = []() { return new ExternalLangmuirBinding(); };
+		bindings[FieldLangmuirBinding::identifier()] = []() { return new FieldLangmuirBinding(); };
 	}
 }  // namespace binding
 

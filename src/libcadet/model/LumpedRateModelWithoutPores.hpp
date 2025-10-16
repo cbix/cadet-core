@@ -28,6 +28,7 @@
 #include "linalg/Gmres.hpp"
 #include "Memory.hpp"
 #include "model/ModelUtils.hpp"
+#include "model/reaction/ReactionSystem.hpp"
 
 #include <array>
 #include <vector>
@@ -145,6 +146,7 @@ public:
 	virtual unsigned int localInletComponentIndex(unsigned int port) const CADET_NOEXCEPT;
 	virtual unsigned int localInletComponentStride(unsigned int port) const CADET_NOEXCEPT;
 
+	virtual void setFields(Field **fields, unsigned int size);
 	virtual void setExternalFunctions(IExternalFunction** extFuns, unsigned int size);
 	virtual void setSectionTimes(double const* secTimes, bool const* secContinuity, unsigned int nSections) { }
 
@@ -250,6 +252,8 @@ protected:
 	std::vector<active> _initCs; //!< Solid phase initial conditions
 	std::vector<double> _initState; //!< Initial conditions for state vector if given
 	std::vector<double> _initStateDot; //!< Initial conditions for time derivative
+	
+	ReactionSystem _reaction;
 
 	BENCH_TIMER(_timerResidual)
 	BENCH_TIMER(_timerResidualPar)

@@ -43,6 +43,144 @@
 
 namespace cadet
 {
+namespace model
+{
+
+class FieldMultiComponentLDFFreundlichParamHandler : public FieldParamHandlerBase
+{
+public:
+	struct ConstParams
+	{
+		typename ScalarParameter::storage_t tau;
+		typename ComponentDependentComponentVectorParameter::storage_t a;
+	};
+
+	struct VariableParams
+	{
+		util::LocalVector<active> kLDF;
+		util::LocalVector<active> kF;
+		util::LocalVector<active> n;
+		ComponentDependentComponentVectorParameter::storage_t a;
+		ScalarParameter::storage_t tau;
+	};
+
+	typedef VariableParams params_t;
+	typedef ConstBufferedScalar<params_t> ParamsHandle;
+
+	static inline const char* identifier() CADET_NOEXCEPT;
+
+	FieldMultiComponentLDFFreundlichParamHandler() CADET_NOEXCEPT : _tau(&_constParams.tau), _a(&_constParams.a)
+	{ }
+
+	inline bool configure(IParameterProvider& paramProvider, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kLDF.configure("MCLDFFRL_KLDF", paramProvider, nComp, nBoundStates);
+		_kF.configure("MCLDFFRL_KF", paramProvider, nComp, nBoundStates);
+		_n.configure("MCLDFFRL_EXP", paramProvider, nComp, nBoundStates);
+		_a.configure("MCLDFFRL_A", paramProvider, nComp, nBoundStates);
+		_tau.configure("MCLDFFRL_TAU", paramProvider, nComp, nBoundStates);
+
+		FieldParamHandlerBase::configure(paramProvider, {"TIME", "AXIAL", "RADIAL", "PARTICLE"});
+
+		return validateConfig(nComp, nBoundStates);
+	}
+
+	inline void registerParameters(std::unordered_map<ParameterId, active*>& parameters, UnitOpIdx unitOpIdx, ParticleTypeIdx parTypeIdx, unsigned int nComp, unsigned int const* nBoundStates)
+	{
+		_kLDF.registerParam("MCLDFFRL_KLDF", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_kF.registerParam("MCLDFFRL_KF", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_n.registerParam("MCLDFFRL_EXP", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_a.registerParam("MCLDFFRL_A", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+		_tau.registerParam("MCLDFFRL_TAU", parameters, unitOpIdx, parTypeIdx, nComp, nBoundStates);
+	}
+
+	inline void reserve(unsigned int numElem, unsigned int numSlices, unsigned int nComp, unsigned int const* nBoundStates) \
+	{
+		_kLDF.reserve(numElem, numSlices, nComp, nBoundStates);
+		_kF.reserve(numElem, numSlices, nComp, nBoundStates);
+		_n.reserve(numElem, numSlices, nComp, nBoundStates);
+	}
+
+	inline ParamsHandle update(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		LOG(Debug) << "MultiComponentLDFFreundlichParamHandler update(" << t << ", " << secIdx << ", "
+			<< colPos.axial << "/" << colPos.radial << "/" << colPos.particle << ", "
+			<< nComp << ", ...)";
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+
+		localParams->a = _constParams.a;
+		localParams->tau = _constParams.tau;
+
+		_kLDF.prepareCache(localParams->kLDF, workSpace);
+		_kLDF.update(cadet::util::dataOfLocalVersion(localParams->kLDF), &fieldBuffer[0], nComp, nBoundStates);
+		_kF.prepareCache(localParams->kF, workSpace);
+		_kF.update(cadet::util::dataOfLocalVersion(localParams->kF), &fieldBuffer[0], nComp, nBoundStates);
+		_n.prepareCache(localParams->n, workSpace);
+		_n.update(cadet::util::dataOfLocalVersion(localParams->n), &fieldBuffer[0], nComp, nBoundStates);
+
+		LOG(Debug) << "MultiComponentLDFFreundlichParamHandler kLDF = " << static_cast<double>(localParams->kLDF[0])
+			<< ", kF = " << static_cast<double>(localParams->kF[0])
+			<< ", n = " << static_cast<double>(localParams->n[0]);
+		return localParams;
+	}
+
+	inline std::tuple<ParamsHandle, ParamsHandle> updateTimeDerivative(double t, unsigned int secIdx, const ColumnPosition& colPos, unsigned int nComp, unsigned int const* nBoundStates, LinearBufferAllocator& workSpace) const
+	{
+		BufferedScalar<params_t> localParams = workSpace.scalar<params_t>();
+		BufferedScalar<params_t> p = workSpace.scalar<params_t>();
+
+		BufferedArray<double> fieldBuffer = workSpace.array<double>(_fields.size());
+		BufferedArray<double> fieldDerivBuffer = workSpace.array<double>(_fields.size());
+
+		evaluateField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldBuffer));
+		evaluateTimeDerivativeField({t, colPos.axial, colPos.radial, colPos.particle}, static_cast<double*>(fieldDerivBuffer));
+
+		_kLDF.prepareCache(localParams->kLDF, workSpace);
+		_kLDF.update(cadet::util::dataOfLocalVersion(localParams->kLDF), &fieldBuffer[0], nComp, nBoundStates);
+		_kLDF.prepareCache(p->kLDF, workSpace);
+		_kLDF.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kLDF), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		_kF.prepareCache(localParams->kF, workSpace);
+		_kF.update(cadet::util::dataOfLocalVersion(localParams->kF), &fieldBuffer[0], nComp, nBoundStates);
+		_kF.prepareCache(p->kF, workSpace);
+		_kF.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->kF), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		_n.prepareCache(localParams->n, workSpace);
+		_n.update(cadet::util::dataOfLocalVersion(localParams->n), &fieldBuffer[0], nComp, nBoundStates);
+		_n.prepareCache(p->n, workSpace);
+		_n.updateTimeDerivative(cadet::util::dataOfLocalVersion(p->n), &fieldBuffer[0], &fieldDerivBuffer[0], nComp, nBoundStates);
+
+		return std::make_tuple<ParamsHandle, ParamsHandle>(std::move(localParams), std::move(p));
+	}
+
+	inline std::size_t cacheSize(unsigned int nComp, unsigned int totalNumBoundStates, unsigned int const* nBoundStates) const CADET_NOEXCEPT
+	{
+		return 2 * sizeof(params_t) + alignof(params_t) + 2 * 3 * sizeof(double) + alignof(double) + 2 * (
+			_kLDF.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates)
+			+ _kF.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates)
+			+ _n.additionalDynamicMemory(nComp, totalNumBoundStates, nBoundStates)
+		);
+	}
+
+protected:
+	inline bool validateConfig(unsigned int nComp, unsigned int const* nBoundStates);
+	ConstParams _constParams;
+	FieldScalarComponentDependentParameter _kLDF;
+	FieldScalarComponentDependentParameter _kF;
+	FieldScalarComponentDependentParameter _n;
+
+	ComponentDependentComponentVectorParameter _a;
+	ScalarParameter _tau;
+};
+
+} // namespace model
+} // namespace cadet
+
+namespace cadet
+{
 
 namespace model
 {
@@ -69,6 +207,19 @@ inline bool ExtMultiComponentLDFFreundlichParamHandler::validateConfig(unsigned 
 
 	if ((_a.slices() != nComp) || (_a.size() != nComp * nComp))
 		throw InvalidParameterException("EXT_MCLDFFRL_A has to have NCOMP^2 elements");
+
+	return true;
+}
+
+inline const char* FieldMultiComponentLDFFreundlichParamHandler::identifier() CADET_NOEXCEPT { return "FIELD_MULTI_COMPONENT_LDF_FREUNDLICH"; }
+
+inline bool FieldMultiComponentLDFFreundlichParamHandler::validateConfig(unsigned int nComp, unsigned int const* nBoundStates)
+{
+	if ((_kLDF.size() != _kF.size()) || (_kLDF.size() != _n.size()) || (_kLDF.size() < nComp))
+		throw InvalidParameterException("MCLDFFRL_KLDF, MCLDFFRL_KF, and MCLDFFRL_N have to have the same size");
+
+	if ((_a.slices() != nComp) || (_a.size() != nComp * nComp))
+		throw InvalidParameterException("MCLDFFRL_A has to have NCOMP^2 elements");
 
 	return true;
 }
@@ -192,6 +343,7 @@ protected:
 
 typedef MultiComponentLDFFreundlichBindingBase<MultiComponentLDFFreundlichParamHandler> MultiComponentLDFFreundlichBinding;
 typedef MultiComponentLDFFreundlichBindingBase<ExtMultiComponentLDFFreundlichParamHandler> ExternalMultiComponentLDFFreundlichBinding;
+typedef MultiComponentLDFFreundlichBindingBase<FieldMultiComponentLDFFreundlichParamHandler> FieldMultiComponentLDFFreundlichBinding;
 
 namespace binding
 {
@@ -199,6 +351,7 @@ namespace binding
 	{
 		bindings[MultiComponentLDFFreundlichBinding::identifier()] = []() { return new MultiComponentLDFFreundlichBinding(); };
 		bindings[ExternalMultiComponentLDFFreundlichBinding::identifier()] = []() { return new ExternalMultiComponentLDFFreundlichBinding(); };
+		bindings[FieldMultiComponentLDFFreundlichBinding::identifier()] = []() { return new FieldMultiComponentLDFFreundlichBinding(); };
 	}
 }  // namespace binding
 
